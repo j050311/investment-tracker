@@ -1,0 +1,1891 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>投資追蹤平台</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{color-scheme:light}
+:root{
+  --bg:#f5f5f3;--bg2:#ffffff;--bg3:#f0efeb;--bg4:#e8e7e2;
+  --text:#1a1a1a;--text2:#555;--text3:#999;
+  --border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.14);
+  --blue:#185FA5;--green:#0F6E56;--red:#993C1D;--amber:#BA7517;--pink:#993556;
+  --blue-light:#E6F1FB;--green-light:#E1F5EE;--red-light:#FAECE7;
+  /* 台灣慣例：漲紅跌綠 */
+  --up:#C0392B;--up-light:#FAEBE9;
+  --down:#0F6E56;--down-light:#E1F5EE;
+  --radius:10px;--radius-sm:7px;
+}
+/* pos = 上漲 = 紅; neg = 下跌 = 綠（台灣慣例） */
+.pos{color:var(--up)}
+.neg{color:var(--down)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang TC',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+
+.app{display:flex;min-height:100vh;overflow-x:hidden}
+.sidebar{width:200px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform .25s}
+.sidebar-inner{overflow-y:auto;flex:1}
+.main{flex:1;margin-left:200px;display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden;min-width:0}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:50}
+.content{padding:18px 20px;flex:1;overflow-x:hidden;min-width:0}
+
+.logo{padding:0 16px 14px;border-bottom:1px solid var(--border);margin-bottom:6px}
+.logo-text{font-size:14px;font-weight:600}
+.logo-sub{font-size:10px;color:var(--text3);margin-top:2px}
+.nav-section{font-size:10px;color:var(--text3);padding:10px 16px 3px;text-transform:uppercase;letter-spacing:.08em;font-weight:500}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 16px;font-size:13px;color:var(--text2);cursor:pointer;transition:all .12s;border-radius:0}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--bg3);color:var(--text);font-weight:500}
+.nav-icon{width:14px;height:14px;flex-shrink:0;opacity:.6}
+.nav-item.active .nav-icon{opacity:1}
+
+.topbar-title{font-size:15px;font-weight:500}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.hamburger{display:none;background:none;border:none;color:var(--text);cursor:pointer;padding:4px}
+
+.btn{padding:6px 13px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;transition:all .12s;white-space:nowrap}
+.btn:hover{background:var(--bg3)}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-primary:hover{background:#0d4a82}
+.btn-sm{padding:4px 10px;font-size:11px}
+
+.metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.metric{background:var(--bg3);border-radius:var(--radius-sm);padding:13px 14px}
+.metric-label{font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;font-weight:500}
+.metric-value{font-size:20px;font-weight:500}
+.metric-change{font-size:11px;margin-top:3px}
+.neutral{color:var(--text3)}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.card-title{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em}
+.charts-row{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:16px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+
+.holdings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:14px}
+.holding-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:box-shadow .15s,border-color .15s;display:flex;flex-direction:column}
+.holding-card:hover{border-color:rgba(0,0,0,.18);box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.holding-top{padding:14px 14px 12px;flex:1}
+.holding-bottom{background:#eceae3;padding:11px 14px;border-top:2px solid rgba(0,0,0,.09)}
+.holding-ticker{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.holding-name{font-size:11px;color:var(--text3);margin-top:3px;margin-bottom:10px}
+.holding-price{font-size:22px;font-weight:600;letter-spacing:-.5px}
+.holding-price-label{font-size:10px;color:var(--text3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.04em;font-weight:500}
+.holding-stat-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.holding-stat-row:last-child{margin-bottom:0}
+.holding-stat-label{font-size:11px;color:#777}
+.holding-stat-value{font-size:13px;font-weight:600;color:var(--text)}
+.holding-stat-value.pos{color:var(--up)}
+.holding-stat-value.neg{color:var(--down)}
+/* Pnl bar inside card */
+.pnl-bar-track{height:3px;background:rgba(0,0,0,.1);border-radius:2px;margin:8px 0 6px}
+.pnl-bar-fill{height:3px;border-radius:2px;max-width:100%}
+.price-refreshing{opacity:.5}
+
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+.table-head{padding:11px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);gap:8px;flex-wrap:wrap}
+.table-head-title{font-size:13px;font-weight:500}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:7px 12px;font-size:10px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);background:var(--bg3);white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600}
+.badge-buy{background:var(--blue-light);color:var(--blue)}
+.badge-sell{background:var(--red-light);color:var(--red)}
+.badge-tw{background:var(--blue-light);color:var(--blue)}
+.badge-us{background:#EEEDFE;color:#534AB7}
+
+.search-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.search-row input,.search-row select{padding:7px 11px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px}
+.search-row input{flex:1;min-width:140px}
+.search-row input::placeholder{color:var(--text3)}
+
+.page{display:none}
+.page.active{display:block}
+
+.fund-item{background:var(--bg3);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px}
+.fund-item-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.fund-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.fund-name{font-size:13px;font-weight:500;flex:1}
+.fund-amount{font-size:13px;color:var(--text2)}
+.fund-bar-track{height:4px;background:var(--bg4);border-radius:2px}
+.fund-bar-fill{height:4px;border-radius:2px;transition:width .4s}
+
+.note-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:15px;margin-bottom:10px}
+.note-title{font-size:13px;font-weight:500}
+.note-date{font-size:10px;color:var(--text3);margin:3px 0 8px}
+.note-body{font-size:12px;color:var(--text2);line-height:1.65}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.tag{font-size:10px;padding:2px 7px;border-radius:4px;background:var(--bg3);color:var(--text2);font-weight:500}
+
+.tax-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.tax-row:last-child{border-bottom:none}
+
+/* Fee settings */
+.fee-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.fee-block{background:var(--bg3);border-radius:var(--radius-sm);padding:14px}
+.fee-block-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.fee-field{margin-bottom:10px}
+.fee-field label{display:block;font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.fee-field input{width:100%;padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px}
+.fee-field .hint{font-size:10px;color:var(--text3);margin-top:3px}
+.fee-subsection{font-size:11px;font-weight:600;color:var(--text3);margin:8px 0 6px;text-transform:uppercase;letter-spacing:.04em}
+
+/* API status */
+.api-status{display:inline-flex;align-items:center;gap:4px;font-size:11px}
+.api-dot{width:7px;height:7px;border-radius:50%;background:#ccc;flex-shrink:0}
+.api-dot.ok{background:var(--green)}
+.api-dot.err{background:var(--red)}
+.api-dot.loading{background:var(--amber);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.expand-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0;font-family:inherit}
+.expand-btn:hover{color:var(--text2)}
+.detail-row{display:none}
+.detail-row.open{display:table-row}
+.detail-row td{background:var(--bg3);font-size:11px;color:var(--text3);padding:5px 12px}
+
+.editable-price{cursor:pointer;border-bottom:1px dashed var(--text3);transition:border-color .12s}
+.editable-price:hover{border-bottom-color:var(--blue)}
+.price-input-inline{background:var(--bg3);border:1px solid var(--blue);border-radius:4px;color:var(--text);font-family:inherit;font-size:16px;padding:2px 7px;width:110px;outline:none}
+
+/* Realized PnL drawer */
+.realized-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+.realized-panel-head{padding:11px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.realized-panel-head:hover{background:var(--bg3)}
+.realized-panel-body{display:none}
+.realized-panel-body.open{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.realized-panel-body table{min-width:680px;width:100%}
+.realized-panel-body .table-scroll{overflow-x:visible}
+
+/* Settings gear in topbar */
+.gear-btn{background:none;border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);cursor:pointer;padding:5px 8px;font-size:14px;line-height:1;transition:all .12s}
+.gear-btn:hover{background:var(--bg3);color:var(--text)}
+
+/* Mobile trade cards */
+.mobile-trade-list{display:none}
+/* Grouped trades */
+.trade-group{}
+.trade-group-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);transition:background .12s}
+.trade-group-header:hover{background:var(--bg3)}
+.trade-group-header.open{background:var(--bg3)}
+.trade-group-left{display:flex;align-items:center;gap:10px}
+.trade-group-ticker{font-size:14px;font-weight:700}
+.trade-group-name{font-size:12px;color:var(--text3)}
+.trade-group-meta{display:flex;gap:12px;align-items:center;font-size:12px}
+.trade-group-count{color:var(--text3);font-size:11px}
+.trade-group-arrow{font-size:11px;color:var(--text3);margin-left:6px;transition:transform .2s;display:inline-block}
+.trade-group-body{display:none;border-bottom:2px solid var(--border)}
+.trade-group-body.open{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.trade-group-body-inner{min-width:640px}
+/* Row inside group — fixed widths always, scroll parent handles overflow */
+.trade-row{display:flex;align-items:center;padding:9px 14px 9px 38px;border-bottom:1px solid var(--border);font-size:12px;gap:0}
+.trade-row:last-child{border-bottom:none}
+.trade-row:hover{background:var(--bg3)}
+.tr-date{width:88px;flex-shrink:0;color:var(--text3)}
+.tr-type{width:54px;flex-shrink:0}
+.tr-mkt{width:68px;flex-shrink:0;color:var(--text3);font-size:11px}
+.tr-shares{width:46px;flex-shrink:0;text-align:right;color:var(--text2)}
+.tr-price{width:80px;flex-shrink:0;text-align:right}
+.tr-cost{width:80px;flex-shrink:0;text-align:right;color:var(--text2)}
+.tr-fee{width:54px;flex-shrink:0;text-align:right;color:var(--text3);font-size:11px}
+.tr-pnl{width:88px;flex-shrink:0;text-align:right;font-weight:600}
+.tr-pct{width:60px;flex-shrink:0;text-align:right;font-weight:500}
+.trade-col-header{display:flex;padding:5px 14px 5px 38px;font-size:10px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;background:var(--bg3)}
+.trade-card{padding:12px 14px;border-bottom:1px solid var(--border)}
+.trade-card:last-child{border-bottom:none}
+.trade-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.trade-card-ticker{font-size:14px;font-weight:600}
+.trade-card-name{font-size:11px;color:var(--text3);margin-top:1px}
+.trade-card-pnl{text-align:right}
+.trade-card-row{display:flex;gap:14px;font-size:11px;color:var(--text2);flex-wrap:wrap}
+.trade-card-row .tfield{display:flex;flex-direction:column;gap:2px}
+.trade-card-row .tlabel{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;font-weight:500}
+@media(max-width:700px){
+  .desktop-table{display:none!important}
+  .mobile-trade-list{display:block!important}
+  .trade-group-meta{flex-direction:column;align-items:flex-end;gap:2px}
+}
+@media(min-width:701px){
+  .desktop-table{display:block}
+  .mobile-trade-list{display:none!important}
+}
+
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .hamburger{display:block}
+  .sidebar-overlay.show{display:block}
+  .metrics-row{grid-template-columns:1fr 1fr}
+  .charts-row,.grid-2,.fee-grid{grid-template-columns:1fr}
+  .holdings-grid{grid-template-columns:1fr 1fr}
+  .grid-3{grid-template-columns:1fr 1fr}
+  .content{padding:14px}
+  .topbar-actions .btn:not(.btn-primary){display:none}
+}
+@media(max-width:420px){
+  .metrics-row,.grid-3{grid-template-columns:1fr}
+  .holdings-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<div class="app">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-inner">
+      <div class="logo">
+        <div class="logo-text">投資追蹤</div>
+        <div class="logo-sub">Portfolio Manager</div>
+      </div>
+      <div class="nav-section">主要功能</div>
+      <div class="nav-item active" onclick="showPage('overview',this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".8"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".8"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/></svg>
+        投資組合
+      </div>
+      <div class="nav-item" onclick="showPage('trades',this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 12L6 8l3 3 5-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        交易紀錄
+      </div>
+      <div class="nav-item" onclick="showPage('funds',this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v6M5.5 7.5L8 5l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        資金來源
+      </div>
+      <div class="nav-section">工具</div>
+      <div class="nav-item" onclick="showPage('notes',this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M3 2h8l2 2v10H3V2z" stroke="currentColor" stroke-width="1.3"/><path d="M6 6h4M6 9h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        策略筆記
+      </div>
+      <div class="nav-item" onclick="showPage('tax',this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 7h3M5 10h2M10 7l2 3M12 7l-2 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        稅務試算
+      </div>
+      <div class="nav-item" onclick="showPage('fees',this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M4 5l2 3-2 3M12 5l-2 3 2 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        手續費設定
+      </div>
+      <div class="nav-item" onclick="showPage('reports',this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M3 13V6l4-4h6v11H3z" stroke="currentColor" stroke-width="1.3"/><path d="M7 2v4H3M6 9h4M6 11h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        報表匯出
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="hamburger" onclick="toggleSidebar()">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 4h14M2 9h14M2 14h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+        <div class="topbar-title" id="page-title">投資組合總覽</div>
+      </div>
+      <div class="topbar-actions">
+        <span class="api-status" id="api-status-bar"><span class="api-dot" id="api-dot"></span><span id="api-label">報價未設定</span></span>
+        <button class="btn btn-sm" onclick="refreshAllPrices()" title="重新整理報價">↻ 更新報價</button>
+        <button class="gear-btn" onclick="openApiSettings()" title="API 報價設定">⚙</button>
+        <button class="btn btn-primary" id="action-btn" onclick="openAddTrade()">+ 新增交易</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ══ 投資組合 ══ -->
+      <div class="page active" id="page-overview">
+
+        <!-- Visual summary strip -->
+        <div class="card" style="margin-bottom:14px;padding:18px 20px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:16px">
+            <div style="padding-right:16px;border-right:1px solid var(--border)">
+              <div class="metric-label" style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px">總市值 <span style="font-weight:400;letter-spacing:0;text-transform:none">（TWD）</span></div>
+              <div style="font-size:26px;font-weight:600;letter-spacing:-.5px" id="total-value">—</div>
+              <div style="font-size:11px;margin-top:3px" id="total-pnl-pct">—</div>
+            </div>
+            <div style="padding-left:16px">
+              <div class="metric-label" style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px">總成本 <span style="font-weight:400;letter-spacing:0;text-transform:none">（TWD）</span></div>
+              <div style="font-size:26px;font-weight:600;letter-spacing:-.5px;color:var(--text2)" id="total-cost">—</div>
+              <div style="font-size:11px;margin-top:3px;color:var(--text3)" id="cost-sub">含手續費</div>
+            </div>
+          </div>
+          <!-- Market value vs cost visual bar -->
+          <div style="margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">
+              <span>成本基礎</span><span id="mv-vs-cost-pct">—</span>
+            </div>
+            <div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">
+              <div id="mv-bar" style="height:8px;border-radius:4px;background:var(--blue);transition:width .5s;width:0%"></div>
+            </div>
+          </div>
+          <!-- Two PnL cells -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px">未實現損益</div>
+              <div style="font-size:18px;font-weight:600;line-height:1.5" id="unrealized-pnl">—</div>
+              <div style="font-size:11px;margin-top:2px;color:var(--text3)">含手續費成本</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px">已實現損益</div>
+              <div style="font-size:20px;font-weight:600" id="realized-pnl-top">—</div>
+              <div style="font-size:11px;margin-top:2px;color:var(--text3)">歷史累計</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Allocation horizontal bar -->
+        <div class="card" style="margin-bottom:14px;padding:14px 16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">持股配比</div>
+            <div style="font-size:11px;color:var(--text3)" id="stock-count-label">— 檔 ｜ <span id="last-update-time">更新中…</span></div>
+          </div>
+          <div id="alloc-bar" style="display:flex;height:10px;border-radius:5px;overflow:hidden;margin-bottom:10px"></div>
+          <div id="alloc-legend" style="display:flex;flex-wrap:wrap;gap:8px 14px"></div>
+        </div>
+
+        <!-- Holdings grid 2-col -->
+        <div class="holdings-grid" id="holdings-grid"></div>
+
+        <!-- Charts row -->
+        <div class="charts-row">
+          <div class="card">
+            <div class="card-title">市值走勢（近6個月）</div>
+            <div style="position:relative;height:220px"><canvas id="lineChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div class="card-title" style="margin-bottom:0">市場別分布</div>
+            </div>
+            <div style="position:relative;height:160px"><canvas id="pieChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- AI suggestion section -->
+        <div class="card" id="ai-suggestion-card" style="border:1px solid rgba(24,95,165,.25);background:#f4f8ff">>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:28px;height:28px;border-radius:7px;background:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5C4.19 1.5 1.5 4.19 1.5 7.5s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 2.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 8c-1.66 0-3.14-.85-4-2.14.02-1.33 2.67-2.06 4-2.06 1.33 0 3.98.73 4 2.06A4.98 4.98 0 017.5 12z" fill="white"/></svg>
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--blue)">AI 投資建議</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:1px">基於你的持倉分析，僅供參考</div>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="getAiSuggestion()" id="ai-btn">分析持倉</button>
+          </div>
+          <div id="ai-output" style="font-size:13px;color:var(--text2);line-height:1.7;min-height:40px">
+            <span style="color:var(--text3)">點擊「分析持倉」，AI 將根據你目前的持倉、損益與配比，給出觀察與建議。</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ 交易紀錄 ══ -->
+      <div class="page" id="page-trades">
+        <!-- Realized PnL summary cards -->
+        <div class="grid-3" id="realized-summary"></div>
+
+        <!-- Expandable realized PnL detail table -->
+        <div class="realized-panel" id="realized-panel">
+          <div class="realized-panel-head" onclick="toggleRealizedPanel()">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:13px;font-weight:500">已實現損益明細</span>
+              <span style="font-size:11px;color:var(--text3)" id="realized-panel-count"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:13px;font-weight:500" id="realized-panel-total"></span>
+              <span style="font-size:12px;color:var(--text3)" id="realized-panel-arrow">▸ 展開</span>
+            </div>
+          </div>
+          <div class="realized-panel-body" id="realized-panel-body">
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>賣出日期</th><th>代號</th><th>名稱</th><th>市場</th><th>股數</th><th>買入均價</th><th>賣出價</th><th>手續費</th><th>損益金額</th><th>報酬率</th></tr></thead>
+                <tbody id="realized-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expandable unrealized PnL detail table -->
+        <div class="realized-panel" id="unrealized-panel">
+          <div class="realized-panel-head" onclick="toggleUnrealizedPanel()">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:13px;font-weight:500">未實現損益明細</span>
+              <span style="font-size:11px;color:var(--text3)" id="unrealized-panel-count"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:13px;font-weight:500" id="unrealized-panel-total"></span>
+              <span style="font-size:12px;color:var(--text3)" id="unrealized-panel-arrow">▸ 展開</span>
+            </div>
+          </div>
+          <div class="realized-panel-body" id="unrealized-panel-body">
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>買入日期</th><th>代號</th><th>名稱</th><th>市場</th><th>股數</th><th>均價（含費）</th><th>現價</th><th>總成本</th><th>現值</th><th>損益金額</th><th>報酬率</th></tr></thead>
+                <tbody id="unrealized-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="search-row">
+          <input type="text" placeholder="搜尋代號或名稱…" oninput="filterTrades(this.value)" id="trade-search">
+          <select id="ticker-filter" onchange="filterTradesByTicker(this.value)" style="min-width:120px">
+            <option value="all">全部股票</option>
+          </select>
+          <button class="btn" onclick="filterTradeType('all')">全部</button>
+          <button class="btn" onclick="filterTradeType('buy')">買入</button>
+          <button class="btn" onclick="filterTradeType('sell')">賣出</button>
+        </div>
+        <div class="table-wrap" id="grouped-trades-wrap">
+          <div class="table-head">
+            <div class="table-head-title">交易明細</div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <button class="btn btn-sm" onclick="toggleAllGroups(true)">全展開</button>
+              <button class="btn btn-sm" onclick="toggleAllGroups(false)">全收合</button>
+              <button class="btn btn-sm btn-primary" onclick="openAddTrade()">+ 新增</button>
+            </div>
+          </div>
+          <div id="grouped-trades-body"></div>
+        </div>
+      </div>
+
+      <!-- ══ 資金來源 ══ -->
+      <div class="page" id="page-funds">
+        <div class="metrics-row" style="grid-template-columns:repeat(3,1fr)">
+          <div class="metric"><div class="metric-label">總投入資金</div><div class="metric-value" id="fund-total">—</div><div class="metric-change neutral" id="fund-count">—</div></div>
+          <div class="metric"><div class="metric-label">最大來源</div><div class="metric-value" id="fund-largest" style="font-size:15px">—</div><div class="metric-change neutral" id="fund-largest-pct">—</div></div>
+          <div class="metric"><div class="metric-label">來源數</div><div class="metric-value" id="fund-source-count">—</div><div class="metric-change neutral">個帳戶/來源</div></div>
+        </div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-title">資金來源分布</div>
+          <div id="fund-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">新增資金來源</div>
+          <div style="display:grid;gap:10px">
+            <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">來源名稱</label>
+            <input type="text" id="fund-name-input" placeholder="如：玉山帳戶、年終獎金" style="width:100%;padding:7px 11px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px"></div>
+            <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">金額（NT$）</label>
+            <input type="number" id="fund-amt-input" placeholder="輸入金額" style="width:100%;padding:7px 11px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px"></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="position:relative">
+                <div id="swatch" onclick="document.getElementById('colorPicker').click()" style="width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border2);cursor:pointer;background:#378ADD"></div>
+                <input type="color" id="colorPicker" value="#378ADD" onchange="document.getElementById('swatch').style.background=this.value" style="opacity:0;width:0;height:0;position:absolute">
+              </div>
+              <button class="btn btn-primary" style="flex:1" onclick="addFundSource()">新增</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ 策略筆記 ══ -->
+      <div class="page" id="page-notes">
+        <div class="search-row"><input type="text" placeholder="搜尋筆記…"><button class="btn">標籤篩選</button><button class="btn btn-primary">+ 新增筆記</button></div>
+        <div class="note-card"><div class="note-title">買入台積電 @848 的決策依據</div><div class="note-date">2025-03-18</div><div class="note-body">CoWoS 封裝需求持續強勁，AI 伺服器客戶訂單能見度高。本次買入 100 股作為加碼，目標價 $1,050，停損 $780。</div><div class="tags"><span class="tag">台積電</span><span class="tag">加碼</span><span class="tag">AI 供應鏈</span></div></div>
+        <div class="note-card"><div class="note-title">2025 年投資策略回顧</div><div class="note-date">2025-01-02</div><div class="note-body">今年聚焦 AI 基礎建設與台灣半導體。降低個股集中度，ETF 比重提升至 30%，整體倉位不超過可動用資金 80%。</div><div class="tags"><span class="tag">年度策略</span><span class="tag">ETF</span><span class="tag">風控</span></div></div>
+      </div>
+
+      <!-- ══ 稅務試算 ══ -->
+      <div class="page" id="page-tax">
+        <div class="metrics-row" style="grid-template-columns:repeat(3,1fr)">
+          <div class="metric"><div class="metric-label">台股證交稅（估）</div><div class="metric-value" id="tax-tw">—</div><div class="metric-change neutral">0.3% × 賣出成交額</div></div>
+          <div class="metric"><div class="metric-label">美股股利所得（估）</div><div class="metric-value">—</div><div class="metric-change neutral">待輸入股利紀錄</div></div>
+          <div class="metric"><div class="metric-label">申報期限</div><div class="metric-value" style="font-size:16px">5月 31日</div><div class="metric-change neg" id="tax-countdown">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">稅務明細（依交易紀錄估算）</div>
+          <div class="tax-row"><span>台股賣出成交稅 (0.3%)</span><span id="tax-detail-tw">—</span></div>
+          <div class="tax-row"><span>台股手續費（費用扣除）</span><span id="tax-fee-tw" class="neg">—</span></div>
+          <div class="tax-row"><span>美股複委託手續費</span><span id="tax-fee-us" class="neg">—</span></div>
+          <div class="tax-row"><span>已實現損益（台股）</span><span id="tax-realized-tw">—</span></div>
+          <div class="tax-row" style="font-weight:600;font-size:14px;padding-top:12px"><span>預估稅負（粗估）</span><span id="tax-est">待計算</span></div>
+          <div style="margin-top:12px"><button class="btn" style="font-size:12px">下載試算表</button></div>
+        </div>
+      </div>
+
+      <!-- ══ 手續費設定 ══ -->
+      <div class="page" id="page-fees">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px;padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm)">
+          手續費設定分為四種模式，每種模式可分別設定買進與賣出費率。設定後自動重算所有損益。
+        </div>
+        <div class="fee-grid">
+          <!-- 台股一般 -->
+          <div class="fee-block">
+            <div class="fee-block-title">🇹🇼 台股（一般交易）</div>
+            <div class="fee-subsection">買進</div>
+            <div class="fee-field"><label>折數（如 2.8 = 28折）</label><input type="number" id="tw-buy-discount" value="2.8" step="0.1" min="1" max="10"><div class="hint" id="tw-buy-preview">實際費率：0.03990%</div></div>
+            <div class="fee-field"><label>最低手續費（元）</label><input type="number" id="tw-buy-min" value="1" step="1"><div class="hint">低消，建議 1 元</div></div>
+            <div class="fee-subsection">賣出</div>
+            <div class="fee-field"><label>折數</label><input type="number" id="tw-sell-discount" value="2.8" step="0.1" min="1" max="10"><div class="hint" id="tw-sell-preview">實際費率：0.03990%</div></div>
+            <div class="fee-field"><label>最低手續費（元）</label><input type="number" id="tw-sell-min" value="1" step="1"></div>
+            <div style="font-size:11px;color:var(--text3);padding:8px;background:var(--bg4);border-radius:5px;margin-top:6px">
+              另計：賣出時還要加收 0.3% 證交稅（固定，不可調）
+            </div>
+          </div>
+          <!-- 台股定期定額 -->
+          <div class="fee-block">
+            <div class="fee-block-title">🇹🇼 台股（定期定額）</div>
+            <div class="fee-subsection">買進</div>
+            <div class="fee-field"><label>手續費率（%）</label><input type="number" id="tw-dca-buy-rate" value="0.2" step="0.01"><div class="hint">定期定額通常費率較高</div></div>
+            <div class="fee-field"><label>最低手續費（元）</label><input type="number" id="tw-dca-buy-min" value="1" step="1"></div>
+            <div class="fee-subsection">賣出</div>
+            <div class="fee-field"><label>手續費率（%）</label><input type="number" id="tw-dca-sell-rate" value="0.2" step="0.01"></div>
+            <div class="fee-field"><label>最低手續費（元）</label><input type="number" id="tw-dca-sell-min" value="1" step="1"></div>
+          </div>
+          <!-- 美股一般 -->
+          <div class="fee-block">
+            <div class="fee-block-title">🇺🇸 美股（複委託，一般）</div>
+            <div class="fee-subsection">買進</div>
+            <div class="fee-field"><label>費率（%）</label><input type="number" id="us-buy-rate" value="0.15" step="0.01"><div class="hint">目前優惠費率</div></div>
+            <div class="fee-field"><label>最低手續費（USD）</label><input type="number" id="us-buy-min" value="1" step="0.5"><div class="hint">目前優惠低消 $1</div></div>
+            <div class="fee-field"><label>一般低消（USD，優惠後）</label><input type="number" id="us-buy-normal-min" value="15" step="1"></div>
+            <div class="fee-subsection">賣出</div>
+            <div class="fee-field"><label>費率（%）</label><input type="number" id="us-sell-rate" value="0.15" step="0.01"></div>
+            <div class="fee-field"><label>最低手續費（USD）</label><input type="number" id="us-sell-min" value="1" step="0.5"></div>
+          </div>
+          <!-- 美股定期定額 -->
+          <div class="fee-block">
+            <div class="fee-block-title">🇺🇸 美股（複委託，定期定額）</div>
+            <div class="fee-subsection">買進</div>
+            <div class="fee-field"><label>費率（%）</label><input type="number" id="us-dca-buy-rate" value="0.2" step="0.01"></div>
+            <div class="fee-field"><label>最低手續費（USD）</label><input type="number" id="us-dca-buy-min" value="1" step="0.5"></div>
+            <div class="fee-subsection">賣出</div>
+            <div class="fee-field"><label>費率（%）</label><input type="number" id="us-dca-sell-rate" value="0.2" step="0.01"></div>
+            <div class="fee-field"><label>最低手續費（USD）</label><input type="number" id="us-dca-sell-min" value="1" step="0.5"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+          <button class="btn btn-primary" onclick="saveFeeSettings()">儲存設定並重算損益</button>
+          <span style="font-size:11px;color:var(--text3)" id="fee-saved-msg"></span>
+        </div>
+        <!-- 試算器 -->
+        <div class="card">
+          <div class="card-title">手續費試算器</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+            <select id="calc-market" onchange="calcFee()" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px">
+              <option value="tw">台股一般</option><option value="tw-dca">台股定期定額</option><option value="us">美股一般</option><option value="us-dca">美股定期定額</option>
+            </select>
+            <select id="calc-side" onchange="calcFee()" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px">
+              <option value="buy">買進</option><option value="sell">賣出</option>
+            </select>
+            <input type="number" id="calc-amount" placeholder="交易金額" oninput="calcFee()" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px;width:140px">
+          </div>
+          <div style="padding:10px 12px;background:var(--bg3);border-radius:var(--radius-sm);font-size:13px" id="calc-result">選擇模式並輸入金額後自動試算</div>
+        </div>
+      </div>
+
+      <!-- ══ 報表匯出 ══ -->
+      <div class="page" id="page-reports">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">季度績效走勢</div>
+            <div style="position:relative;height:190px"><canvas id="reportChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">匯出設定</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">時間區間</label>
+              <select style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px"><option>2025 全年</option><option>2024 全年</option><option>近 6 個月</option><option>自訂</option></select></div>
+              <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">報表類型</label>
+              <select style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px"><option>投資績效總覽</option><option>交易明細報表</option><option>損益彙總報表</option><option>稅務試算表</option></select></div>
+              <div style="display:flex;gap:8px"><button class="btn btn-primary" style="flex:1;font-size:12px">匯出 PDF</button><button class="btn" style="flex:1;font-size:12px">匯出 Excel</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- API Settings Modal -->
+<div id="api-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:500">⚙ 即時報價設定</div>
+      <button onclick="document.getElementById('api-modal').style.display='none'" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;line-height:1">×</button>
+    </div>
+    <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px">🇹🇼 台股（TWSE 官方，免費）</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">不需要 API key，開啟網站自動抓取。盤中 9:00–13:30 為即時報價，盤後顯示收盤價。</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-sm" onclick="testTWSE()">測試連線</button>
+        <span class="api-status"><span class="api-dot" id="twse-dot"></span><span id="twse-label">未測試</span></span>
+      </div>
+    </div>
+    <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px 14px">
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px">🇺🇸 美股（Finnhub，免費 60次/分鐘）</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">
+        請至 <a href="https://finnhub.io/" target="_blank" style="color:var(--blue)">finnhub.io</a> 免費註冊取得 API key（只需輸入一次，儲存後自動記住）。免費版為 15 分鐘延遲報價。
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Finnhub API Key</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="finnhub-key" placeholder="填入後點儲存，之後自動讀取" style="flex:1;padding:7px 11px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px">
+          <button class="btn btn-primary btn-sm" onclick="saveFinnhubKey()">儲存</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-sm" onclick="testFinnhub()">測試連線</button>
+        <span class="api-status"><span class="api-dot" id="finnhub-dot"></span><span id="finnhub-label">未設定</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Trade Modal -->
+<div id="add-trade-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:20px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:500">新增交易</div>
+      <button onclick="closeAddTrade()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;line-height:1">×</button>
+    </div>
+    <div style="display:grid;gap:10px">
+      <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">日期</label><input type="date" id="t-date" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">市場</label>
+        <select id="t-market" onchange="updateModalFeeHint()" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px">
+          <option value="tw">台股一般</option><option value="tw-dca">台股定期定額</option><option value="us">美股一般</option><option value="us-dca">美股定期定額</option>
+        </select></div>
+        <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">類型</label>
+        <select id="t-type" onchange="updateModalFeeHint()" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px"><option value="buy">買入</option><option value="sell">賣出</option></select></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">股票代號</label><input type="text" id="t-ticker" placeholder="2330 / AAPL" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px"></div>
+        <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">名稱</label><input type="text" id="t-name" placeholder="台積電" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">股數</label><input type="number" id="t-shares" placeholder="100" oninput="updateModalFeeHint()" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px"></div>
+        <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">成交價</label><input type="number" id="t-price" placeholder="848" oninput="updateModalFeeHint()" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px"></div>
+      </div>
+      <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">手續費</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="number" id="t-fee" placeholder="自動計算" style="flex:1;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px">
+          <button class="btn btn-sm" onclick="autoFeeModal()">自動</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" id="modal-fee-hint">輸入股數與成交價後估算</div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:4px" onclick="saveTrade()">新增交易</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK（Firebase 的工具箱，讓我們能使用它的功能） -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let feeSettings = {
+  twBuyDiscount:2.8, twBuyMin:1,
+  twSellDiscount:2.8, twSellMin:1,
+  twDcaBuyRate:0.2, twDcaBuyMin:1,
+  twDcaSellRate:0.2, twDcaSellMin:1,
+  usBuyRate:0.15, usBuyMin:1, usBuyNormalMin:15,
+  usSellRate:0.15, usSellMin:1,
+  usDcaBuyRate:0.2, usDcaBuyMin:1,
+  usDcaSellRate:0.2, usDcaSellMin:1,
+};
+
+let trades = [
+  // 元大台灣50 (0050) — 定期定額買入
+  {id:1, date:'2025-07-22',ticker:'0050',name:'元大台灣50',market:'tw-dca',type:'buy',shares:98, price:50.93, fee:null},
+  {id:2, date:'2025-08-22',ticker:'0050',name:'元大台灣50',market:'tw-dca',type:'buy',shares:57, price:52.04, fee:null},
+  {id:3, date:'2025-09-22',ticker:'0050',name:'元大台灣50',market:'tw-dca',type:'buy',shares:52, price:56.99, fee:null},
+  {id:4, date:'2025-10-22',ticker:'0050',name:'元大台灣50',market:'tw-dca',type:'buy',shares:47, price:62.60, fee:null},
+  {id:5, date:'2025-11-24',ticker:'0050',name:'元大台灣50',market:'tw-dca',type:'buy',shares:49, price:60.08, fee:null},
+  {id:6, date:'2025-12-22',ticker:'0050',name:'元大台灣50',market:'tw-dca',type:'buy',shares:47, price:63.30, fee:null},
+  {id:7, date:'2026-01-22',ticker:'0050',name:'元大台灣50',market:'tw-dca',type:'buy',shares:41, price:71.90, fee:null},
+  {id:8, date:'2026-02-23',ticker:'0050',name:'元大台灣50',market:'tw-dca',type:'buy',shares:38, price:78.44, fee:null},
+  {id:9, date:'2026-03-10',ticker:'0050',name:'元大台灣50',market:'tw',    type:'buy',shares:250,price:75.00, fee:null},
+  {id:10,date:'2026-03-23',ticker:'0050',name:'元大台灣50',market:'tw-dca',type:'buy',shares:40, price:73.54, fee:null},
+  // 台積電 (2330)
+  {id:11,date:'2025-08-22',ticker:'2330',name:'台積電',market:'tw',    type:'buy',shares:100,price:1145.00,fee:null},
+  {id:12,date:'2025-08-22',ticker:'2330',name:'台積電',market:'tw-dca',type:'buy',shares:2,  price:1145.08,fee:null},
+  {id:13,date:'2025-09-22',ticker:'2330',name:'台積電',market:'tw-dca',type:'buy',shares:2,  price:1270.43,fee:null},
+  {id:14,date:'2025-10-22',ticker:'2330',name:'台積電',market:'tw-dca',type:'buy',shares:2,  price:1465.00,fee:null},
+  {id:15,date:'2025-11-07',ticker:'2330',name:'台積電',market:'tw',    type:'buy',shares:50, price:1460.00,fee:null},
+  {id:16,date:'2025-11-24',ticker:'2330',name:'台積電',market:'tw-dca',type:'buy',shares:2,  price:1399.18,fee:null},
+  {id:17,date:'2025-12-22',ticker:'2330',name:'台積電',market:'tw-dca',type:'buy',shares:2,  price:1464.76,fee:null},
+  {id:18,date:'2026-01-22',ticker:'2330',name:'台積電',market:'tw-dca',type:'buy',shares:1,  price:1760.21,fee:null},
+  {id:19,date:'2026-02-06',ticker:'2330',name:'台積電',market:'tw',    type:'buy',shares:30, price:1750.00,fee:null},
+  {id:20,date:'2026-02-23',ticker:'2330',name:'台積電',market:'tw-dca',type:'buy',shares:2,  price:1906.04,fee:null},
+  {id:21,date:'2026-03-04',ticker:'2330',name:'台積電',market:'tw',    type:'buy',shares:10, price:1895.00,fee:null},
+  {id:22,date:'2026-03-10',ticker:'2330',name:'台積電',market:'tw',    type:'buy',shares:10, price:1855.00,fee:null},
+  {id:23,date:'2026-03-19',ticker:'2330',name:'台積電',market:'tw',    type:'buy',shares:100,price:1860.00,fee:null},
+  {id:24,date:'2026-03-23',ticker:'2330',name:'台積電',market:'tw-dca',type:'buy',shares:2,  price:1793.32,fee:null},
+  {id:25,date:'2026-03-31',ticker:'2330',name:'台積電',market:'tw',    type:'buy',shares:50, price:1780.00,fee:null},
+  // 美股（複委託）—— 費用直接用對帳單數字
+  {id:26,date:'2026-02-02',ticker:'GLD', name:'SPDR Gold',             market:'us',type:'buy', shares:2, price:429.1848,fee:1},
+  {id:27,date:'2026-03-05',ticker:'TSM', name:'台積電 ADR',             market:'us',type:'buy', shares:1, price:344.60,  fee:1},
+  {id:28,date:'2026-03-03',ticker:'TSM', name:'台積電 ADR',             market:'us',type:'buy', shares:2, price:353.30,  fee:1},
+  {id:29,date:'2026-03-17',ticker:'MU',  name:'Micron Technology',     market:'us',type:'buy', shares:1, price:447.83,  fee:1},
+  {id:30,date:'2026-03-17',ticker:'MU',  name:'Micron Technology',     market:'us',type:'sell',shares:1, price:455.00,  fee:15},
+  {id:31,date:'2026-03-17',ticker:'GLD', name:'SPDR Gold',             market:'us',type:'sell',shares:1, price:460.89,  fee:15},
+  {id:32,date:'2026-03-27',ticker:'TSM', name:'台積電 ADR',             market:'us',type:'buy', shares:1, price:326.00,  fee:1},
+  {id:33,date:'2026-03-30',ticker:'GLD', name:'SPDR Gold',             market:'us',type:'sell',shares:1, price:417.115, fee:15},
+  {id:34,date:'2026-03-30',ticker:'TSM', name:'台積電 ADR',             market:'us',type:'buy', shares:1, price:315.00,  fee:1},
+  {id:35,date:'2026-04-09',ticker:'TSM', name:'台積電 ADR',             market:'us',type:'sell',shares:5, price:365.00,  fee:15.04},
+  {id:36,date:'2026-04-10',ticker:'PLTR',name:'Palantir Technologies', market:'us',type:'buy', shares:2, price:127.68,  fee:1},
+  {id:37,date:'2026-04-10',ticker:'PLTR',name:'Palantir Technologies', market:'us',type:'buy', shares:5, price:127.93,  fee:1},
+];
+
+let currentPrices = {
+  '0050': 83.10,
+  '2330': 2055.00,
+  'TSM':  118.00,
+  'GLD':  290.00,
+  'MU':   0,
+  'PLTR': 95.00,
+};
+
+let fundSources = [
+  {name:'玉山帳戶',amount:7960,color:'#378ADD'},
+  {name:'國泰帳戶',amount:5908,color:'#1D9E75'},
+  {name:'年終獎金',amount:8503,color:'#EF9F27'},
+  {name:'親友贊助',amount:17908,color:'#D4537E'},
+];
+
+let finnhubKey = localStorage.getItem('finnhub_key')||'';
+let tradeFilter = {text:'',type:'all',ticker:'all'};
+let tradeIdCounter = 38;
+let pieChartInst, lineChartInst, reportChartInst;
+
+// ══════════════════════════════════════════
+//  FEE CALCULATION
+// ══════════════════════════════════════════
+function computeFee(trade) {
+  if (trade.fee !== null && trade.fee !== undefined) return trade.fee;
+  const mkt = trade.market || 'tw';
+  const side = trade.type === 'buy' ? 'buy' : 'sell';
+  const amount = trade.shares * trade.price;
+  return calcFeeByMode(mkt, side, amount);
+}
+
+function calcFeeByMode(mode, side, amount) {
+  const f = feeSettings;
+  if (mode === 'tw') {
+    const d = side==='buy' ? f.twBuyDiscount : f.twSellDiscount;
+    const mn = side==='buy' ? f.twBuyMin : f.twSellMin;
+    return Math.max(amount * 0.001425 * (d/10), mn);
+  }
+  if (mode === 'tw-dca') {
+    const r = side==='buy' ? f.twDcaBuyRate : f.twDcaSellRate;
+    const mn = side==='buy' ? f.twDcaBuyMin : f.twDcaSellMin;
+    return Math.max(amount * r / 100, mn);
+  }
+  if (mode === 'us') {
+    const r = side==='buy' ? f.usBuyRate : f.usSellRate;
+    const mn = side==='buy' ? f.usBuyMin : f.usSellMin;
+    return Math.max(amount * r / 100, mn);
+  }
+  if (mode === 'us-dca') {
+    const r = side==='buy' ? f.usDcaBuyRate : f.usDcaSellRate;
+    const mn = side==='buy' ? f.usDcaBuyMin : f.usDcaSellMin;
+    return Math.max(amount * r / 100, mn);
+  }
+  return 0;
+}
+
+// ══════════════════════════════════════════
+//  PORTFOLIO CALCULATIONS
+// ══════════════════════════════════════════
+function getHoldings() {
+  const map = {};
+  trades.forEach(t => {
+    if (!map[t.ticker]) map[t.ticker] = {ticker:t.ticker, name:t.name, market:t.market, shares:0, totalCost:0};
+    const fee = computeFee(t);
+    if (t.type === 'buy') {
+      map[t.ticker].shares += t.shares;
+      map[t.ticker].totalCost += t.shares * t.price + fee;
+    } else {
+      const avg = map[t.ticker].shares > 0 ? map[t.ticker].totalCost / map[t.ticker].shares : t.price;
+      map[t.ticker].shares -= t.shares;
+      map[t.ticker].totalCost -= avg * t.shares;
+    }
+  });
+  return Object.values(map).filter(h => h.shares > 0);
+}
+
+function getRealizedPnL() {
+  let total = 0;
+  const avgCost = {};
+  trades.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(t => {
+    const fee = computeFee(t);
+    if (!avgCost[t.ticker]) avgCost[t.ticker] = {cost:0, shares:0};
+    if (t.type === 'buy') {
+      const prev = avgCost[t.ticker];
+      const newTotal = prev.cost * prev.shares + (t.price + fee/t.shares) * t.shares;
+      const newShares = prev.shares + t.shares;
+      avgCost[t.ticker] = {cost: newShares>0?newTotal/newShares:0, shares:newShares};
+    } else {
+      const costBasis = avgCost[t.ticker].cost || t.price;
+      const pnl = (t.price - costBasis) * t.shares - fee;
+      total += pnl;
+      avgCost[t.ticker].shares -= t.shares;
+    }
+  });
+  return total;
+}
+
+function getRealizedPnLByCurrency(type) {
+  // type: 'tw' = TWD markets, 'us' = USD markets
+  let total = 0;
+  const avgCost = {};
+  trades.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(t => {
+    const fee = computeFee(t);
+    if (!avgCost[t.ticker]) avgCost[t.ticker] = {cost:0, shares:0};
+    if (t.type === 'buy') {
+      const prev = avgCost[t.ticker];
+      const newTotal = prev.cost*prev.shares + (t.price+fee/t.shares)*t.shares;
+      const newShares = prev.shares + t.shares;
+      avgCost[t.ticker] = {cost:newShares>0?newTotal/newShares:0, shares:newShares};
+    } else {
+      const isUS = t.market==='us'||t.market==='us-dca';
+      const matches = (type==='us') ? isUS : !isUS;
+      if (matches) {
+        const costBasis = avgCost[t.ticker].cost || t.price;
+        total += (t.price - costBasis) * t.shares - fee;
+      }
+      avgCost[t.ticker].shares -= t.shares;
+    }
+  });
+  return total;
+}
+
+// ══════════════════════════════════════════
+//  RENDER OVERVIEW
+// ══════════════════════════════════════════
+function renderOverview() {
+  const holdings = getHoldings();
+  const realizedTotal = getRealizedPnL();
+  let totalMV = 0, totalCost = 0;
+  holdings.forEach(h => {
+    const cp = currentPrices[h.ticker] || 0;
+    totalMV += cp * h.shares;
+    totalCost += h.totalCost;
+  });
+  const unrealized = totalMV - totalCost;
+  const unrealizedPct = totalCost > 0 ? unrealized/totalCost*100 : 0;
+
+  document.getElementById('total-value').textContent = Math.round(totalMV).toLocaleString();
+  document.getElementById('total-value').className = 'font-size:26px;font-weight:600';
+  document.getElementById('total-cost').textContent = Math.round(totalCost).toLocaleString();
+  // Unrealized split by currency
+  let unrealizedTWD = 0, unrealizedUSD = 0;
+  holdings.forEach(h => {
+    const cp = currentPrices[h.ticker] || 0;
+    const pnl = (cp - (h.shares>0?h.totalCost/h.shares:0)) * h.shares;
+    const isUS = h.market==='us'||h.market==='us-dca';
+    if(isUS) unrealizedUSD += pnl; else unrealizedTWD += pnl;
+  });
+  const unrealizedEl = document.getElementById('unrealized-pnl');
+  const twdHtml = `<span style="color:${unrealizedTWD>=0?'var(--up)':'var(--down)'}">${unrealizedTWD>=0?'+':''}${Math.round(unrealizedTWD).toLocaleString()}</span><span style="font-size:12px;color:var(--text3)"> TWD</span>`;
+  const usdHtml = unrealizedUSD!==0 ? `<br><span style="color:${unrealizedUSD>=0?'var(--up)':'var(--down)'};">${unrealizedUSD>=0?'+':''}${unrealizedUSD.toFixed(2)}</span><span style="font-size:12px;color:var(--text3)"> USD</span>` : '';
+  unrealizedEl.innerHTML = twdHtml + usdHtml;
+  document.getElementById('total-pnl-pct').textContent = (unrealized>=0?'▲ +':'▼ ')+Math.abs(unrealizedPct).toFixed(2)+'%';
+  document.getElementById('total-pnl-pct').style.color = unrealized>=0?'var(--up)':'var(--down)';
+  const realizedTWD = getRealizedPnLByCurrency('tw');
+  const realizedUSD = getRealizedPnLByCurrency('us');
+  const realizedTWDEl = document.getElementById('realized-pnl-top');
+  const realizedTWDHtml = `<span style="color:${realizedTWD>=0?'var(--up)':'var(--down)'}">${realizedTWD>=0?'+':''}${Math.round(realizedTWD).toLocaleString()}</span><span style="font-size:12px;color:var(--text3)"> TWD</span>`;
+  const realizedUSDHtml = realizedUSD!==0 ? `<br><span style="color:${realizedUSD>=0?'var(--up)':'var(--down)'};">${realizedUSD>=0?'+':''}${Math.abs(realizedUSD).toFixed(2)}</span><span style="font-size:12px;color:var(--text3)"> USD</span>` : '';
+  realizedTWDEl.innerHTML = realizedTWDHtml + realizedUSDHtml;
+  document.getElementById('stock-count-label').innerHTML = holdings.length+' 檔 ｜ <span id="last-update-time">'+( document.getElementById('last-update-time')?document.getElementById('last-update-time').textContent:'更新中…')+'</span>';
+
+  // Market value vs cost bar
+  const barPct = totalCost > 0 ? Math.min(totalMV/totalCost*100, 150) : 0;
+  const normalizedBarW = totalCost > 0 ? Math.min((totalMV/totalCost)*66, 100) : 66;
+  document.getElementById('mv-bar').style.width = normalizedBarW+'%';
+  document.getElementById('mv-bar').style.background = unrealized>=0?'#185FA5':'#993C1D';
+  document.getElementById('mv-vs-cost-pct').textContent = totalCost>0?(totalMV/totalCost*100).toFixed(1)+'%':'—';
+
+  // Allocation horizontal bar
+  const allocBar = document.getElementById('alloc-bar');
+  const allocLegend = document.getElementById('alloc-legend');
+  const totalMV2 = holdings.reduce((s,h)=>(s+(currentPrices[h.ticker]||0)*h.shares),0)||1;
+  allocBar.innerHTML='';
+  allocLegend.innerHTML='';
+  holdings.forEach((h,i)=>{
+    const mv=(currentPrices[h.ticker]||0)*h.shares;
+    const pct=mv/totalMV2*100;
+    const col=PALETTE[i%PALETTE.length];
+    const seg=document.createElement('div');
+    seg.style.cssText=`width:${pct}%;background:${col};height:10px;`;
+    seg.title=`${h.ticker}: ${pct.toFixed(1)}%`;
+    allocBar.appendChild(seg);
+    const leg=document.createElement('span');
+    leg.style.cssText='display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)';
+    leg.innerHTML=`<span style="width:8px;height:8px;border-radius:2px;background:${col};display:inline-block;flex-shrink:0"></span>${h.ticker} <span style="color:var(--text3)">${pct.toFixed(1)}%</span>`;
+    allocLegend.appendChild(leg);
+  });
+
+  const grid = document.getElementById('holdings-grid');
+  grid.innerHTML = '';
+  holdings.forEach(h => {
+    const cp = currentPrices[h.ticker] || 0;
+    const avg = h.shares > 0 ? h.totalCost / h.shares : 0;
+    const pnl = (cp - avg) * h.shares;
+    const pct = avg > 0 ? (cp - avg)/avg*100 : 0;
+    const pnlCls = pnl >= 0 ? 'pos' : 'neg';
+    const isUS = h.market==='us'||h.market==='us-dca';
+    const sym = isUS ? '$' : '';
+    const card = document.createElement('div');
+    card.className = 'holding-card';
+    // Format PnL without NT$
+    const pnlAmt = (pnl>=0?'+':'-') + sym + Math.abs(Math.round(pnl)).toLocaleString();
+    const pnlPctStr = (pct>=0?'+':'') + pct.toFixed(1) + '%';
+    const priceStr = sym + cp.toLocaleString(undefined,{maximumFractionDigits:2});
+    const avgStr = sym + avg.toFixed(2);
+    card.innerHTML = `
+      <div class="holding-top">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px">
+          <div>
+            <div class="holding-ticker">${h.ticker} <span class="badge ${isUS?'badge-us':'badge-tw'}">${isUS?'美股':'台股'}</span></div>
+            <div class="holding-name">${h.name}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">現價</div>
+            <div style="font-size:13px;font-weight:500;color:var(--text2)" id="card-price-${h.ticker}">
+              <span class="editable-price" onclick="editPrice('${h.ticker}',this)" title="點擊更新">${priceStr}</span>
+            </div>
+          </div>
+        </div>
+        <div class="pnl-bar-track">
+          <div class="pnl-bar-fill" style="width:${Math.min(Math.abs(pct)*2,100)}%;background:${pnlCls==='pos'?'var(--up)':'var(--down)'}"></div>
+        </div>
+      </div>
+      <div class="holding-bottom">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div>
+            <div style="font-size:10px;color:#777;font-weight:500;margin-bottom:3px">損益金額</div>
+            <div style="font-size:15px;font-weight:700;letter-spacing:-.2px" class="${pnlCls}">${pnlAmt}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;color:#777;font-weight:500;margin-bottom:3px">報酬率</div>
+            <div style="font-size:15px;font-weight:700" class="${pnlCls}">${pnlPctStr}</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid rgba(0,0,0,.07)">
+          <div style="font-size:11px;color:#777">均價 <span style="color:var(--text);font-weight:500">${avgStr}</span></div>
+          <div style="font-size:11px;color:#777">持股 <span style="color:var(--text);font-weight:500">${h.shares.toLocaleString()} 股</span></div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  renderPieChart(holdings);
+  renderLineChart(); // recalculate with current prices each time
+}
+
+function editPrice(ticker, el) {
+  const cur = currentPrices[ticker] || 0;
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.value = cur;
+  input.className = 'price-input-inline';
+  input.onblur = () => {
+    const v = parseFloat(input.value);
+    if (!isNaN(v) && v > 0) currentPrices[ticker] = v;
+    renderOverview();
+    renderTradesTable();
+    renderTax();
+    saveAllToCloud(); // 存現價到雲端
+  };
+  input.onkeydown = e => { if(e.key==='Enter') input.blur(); if(e.key==='Escape'){currentPrices[ticker]=cur;renderOverview();} };
+  el.replaceWith(input);
+  input.focus(); input.select();
+}
+//  CHARTS
+// ══════════════════════════════════════════
+const PALETTE = ['#185FA5','#C0392B','#E67E22','#27AE60','#8E44AD','#16A085','#D35400'];
+
+function renderPieChart(holdings) {
+  // Market split doughnut
+  const tw = holdings.filter(h=>h.market==='tw'||h.market==='tw-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0);
+  const us = holdings.filter(h=>h.market==='us'||h.market==='us-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0);
+  const total=tw+us||1;
+  if(pieChartInst) pieChartInst.destroy();
+  pieChartInst = new Chart(document.getElementById('pieChart'),{
+    type:'doughnut',
+    data:{
+      labels:['台股','美股'],
+      datasets:[{data:[tw,us],backgroundColor:['#185FA5','#D85A30'],borderWidth:0}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{position:'bottom',labels:{color:'#777',font:{size:11},boxWidth:10,padding:12}}}}
+  });
+}
+
+// ══════════════════════════════════════════
+//  AI SUGGESTION
+// ══════════════════════════════════════════
+async function getAiSuggestion() {
+  const holdings = getHoldings();
+  const realizedTotal = getRealizedPnL();
+  let totalMV=0,totalCost=0;
+  holdings.forEach(h=>{
+    const cp=currentPrices[h.ticker]||0;
+    totalMV+=cp*h.shares; totalCost+=h.totalCost;
+  });
+  const unrealized=totalMV-totalCost;
+  const btn=document.getElementById('ai-btn');
+  const out=document.getElementById('ai-output');
+  btn.disabled=true; btn.textContent='分析中…';
+  out.innerHTML='<span style="color:var(--text3)">AI 正在分析你的持倉…</span>';
+
+  const holdingsSummary=holdings.map(h=>{
+    const cp=currentPrices[h.ticker]||0;
+    const avg=h.totalCost/h.shares;
+    const pct=avg>0?(cp-avg)/avg*100:0;
+    const mv=cp*h.shares;
+    return `${h.ticker}(${h.name}) 持${h.shares}股 均價${avg.toFixed(0)} 現價${cp} 報酬率${pct.toFixed(1)}% 市值佔比${totalMV>0?(mv/totalMV*100).toFixed(1):'?'}%`;
+  }).join('\n');
+
+  const prompt=`你是一位台灣投資顧問，請用繁體中文分析以下投資組合，給出3點簡短觀察與建議（每點2-3句話，不要用過多專業術語，要像朋友聊天一樣直白）。
+
+持倉資訊：
+${holdingsSummary}
+
+總市值：${Math.round(totalMV).toLocaleString()}
+總成本：${Math.round(totalCost).toLocaleString()}
+未實現損益：${fmtPnl(unrealized)}（${(unrealized/totalCost*100).toFixed(1)}%）
+已實現損益：${fmtPnl(realizedTotal)}
+
+請聚焦在：集中度風險、個股表現異常、整體配置是否平衡。最後加一行免責聲明。`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await res.json();
+    const text=data.content?.[0]?.text||'無法取得建議，請稍後再試。';
+    // Format: convert numbered points to styled blocks
+    const formatted=text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+    out.innerHTML=formatted;
+  }catch(e){
+    out.innerHTML='<span style="color:var(--red)">連線失敗，請確認網路後再試。</span>';
+  }
+  btn.disabled=false; btn.textContent='重新分析';
+}
+
+function renderLineChart() {
+  if(lineChartInst) { lineChartInst.destroy(); lineChartInst=null; }
+  // Build monthly cost & estimated market value from trades
+  const allDates = trades.map(t=>t.date).sort();
+  if(allDates.length===0) return;
+
+  // Generate month labels from first trade month to today
+  const firstDate = new Date(allDates[0]);
+  const now = new Date();
+  const months = [];
+  let cur = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+  while(cur <= now) {
+    months.push(new Date(cur));
+    cur.setMonth(cur.getMonth()+1);
+  }
+  // For each month-end: compute cumulative cost invested & estimated market value
+  const costData = [], mvData = [], labels = [];
+  months.forEach(m => {
+    const monthEnd = new Date(m.getFullYear(), m.getMonth()+1, 0);
+    const cutoff = monthEnd.toISOString().split('T')[0];
+    // Sum all buy costs up to this month
+    const relevant = trades.filter(t => t.date <= cutoff);
+    let totalCost = 0;
+    // track shares per ticker at this point
+    const shares = {};
+    const avgCost = {};
+    relevant.sort((a,b)=>a.date.localeCompare(b.date)).forEach(t=>{
+      const fee = computeFee(t);
+      if(!shares[t.ticker]) { shares[t.ticker]=0; avgCost[t.ticker]=0; }
+      if(t.type==='buy'){
+        const prev = avgCost[t.ticker]*shares[t.ticker];
+        shares[t.ticker]+=t.shares;
+        avgCost[t.ticker]=(prev + t.price*t.shares+fee)/shares[t.ticker];
+      } else {
+        shares[t.ticker]-=t.shares;
+      }
+    });
+    // Total cost = sum of (avgCost * shares held) for current holdings
+    Object.keys(shares).forEach(tk=>{
+      if(shares[tk]>0) totalCost += avgCost[tk]*shares[tk];
+    });
+    // Estimated MV using current prices (approximate)
+    let mv=0;
+    Object.keys(shares).forEach(tk=>{
+      mv += (currentPrices[tk]||0)*Math.max(shares[tk],0);
+    });
+    // Only add if there's any investment
+    if(totalCost>0||mv>0){
+      const mo = m.getMonth()+1;
+      const yr = m.getFullYear();
+      labels.push(`${yr===new Date().getFullYear()?'':yr+'/'}${mo}月`);
+      costData.push(Math.round(totalCost));
+      mvData.push(Math.round(mv));
+    }
+  });
+
+  const ctx = document.getElementById('lineChart');
+  lineChartInst = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {
+          label:'市值（估）',
+          data:mvData,
+          borderColor:'#185FA5',
+          backgroundColor:'rgba(24,95,165,.07)',
+          fill:true, tension:.35,
+          pointRadius:3, pointBackgroundColor:'#185FA5', pointBorderColor:'#fff', pointBorderWidth:2,
+          borderWidth:2.5
+        },
+        {
+          label:'累積成本',
+          data:costData,
+          borderColor:'#aaa',
+          backgroundColor:'transparent',
+          fill:false, tension:.35,
+          pointRadius:0,
+          borderWidth:1.5,
+          borderDash:[4,3]
+        }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true, position:'top', align:'end', labels:{color:'#999', font:{size:11}, boxWidth:10, padding:12}}
+      },
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,.05)'}, ticks:{color:'#999', font:{size:11}, maxTicksLimit:8}},
+        y:{grid:{color:'rgba(0,0,0,.05)'}, ticks:{color:'#999', font:{size:11},
+          callback:v=> v>=10000 ? Math.round(v/10000)+'萬' : v.toLocaleString()
+        }}
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+//  TRADES TABLE
+// ══════════════════════════════════════════
+function toggleRealizedPanel(){
+  const body=document.getElementById('realized-panel-body');
+  const arrow=document.getElementById('realized-panel-arrow');
+  const open=body.classList.toggle('open');
+  arrow.textContent=open?'▾ 收合':'▸ 展開';
+}
+
+function toggleUnrealizedPanel(){
+  const body=document.getElementById('unrealized-panel-body');
+  const arrow=document.getElementById('unrealized-panel-arrow');
+  const open=body.classList.toggle('open');
+  arrow.textContent=open?'▾ 收合':'▸ 展開';
+}
+
+function renderUnrealizedTable(){
+  const holdings=getHoldings();
+  let totalTWD=0, totalUSD=0;
+  const tbody=document.getElementById('unrealized-table-body');
+  tbody.innerHTML='';
+
+  if(holdings.length===0){
+    tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:20px">目前無持倉</td></tr>';
+    document.getElementById('unrealized-panel-total').innerHTML='—';
+    document.getElementById('unrealized-panel-count').textContent='';
+    return;
+  }
+
+  const firstBuy={};
+  trades.filter(t=>t.type==='buy').forEach(t=>{
+    if(!firstBuy[t.ticker]||t.date<firstBuy[t.ticker]) firstBuy[t.ticker]=t.date;
+  });
+
+  holdings.forEach(h=>{
+    const cp=currentPrices[h.ticker]||0;
+    const avg=h.shares>0?h.totalCost/h.shares:0;
+    const mv=cp*h.shares;
+    const pnl=mv-h.totalCost;
+    const pct=h.totalCost>0?pnl/h.totalCost*100:0;
+    const isUS=h.market==='us'||h.market==='us-dca';
+    if(isUS) totalUSD+=pnl; else totalTWD+=pnl;
+    const sym=isUS?'$':'';
+    const cls=pnl>=0?'pos':'neg';
+    const mktLabel={tw:'台股',us:'美股','tw-dca':'台股定額','us-dca':'美股定額'}[h.market]||h.market;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="color:var(--text3)">${firstBuy[h.ticker]||'—'}</td>
+      <td style="font-weight:500">${h.ticker}</td>
+      <td>${h.name}</td>
+      <td><span class="badge ${isUS?'badge-us':'badge-tw'}">${mktLabel}</span></td>
+      <td>${h.shares.toLocaleString()}</td>
+      <td style="color:var(--text2)">${sym}${avg.toFixed(2)}</td>
+      <td>${sym}${cp.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+      <td style="color:var(--text2)">${sym}${Math.round(h.totalCost).toLocaleString()}</td>
+      <td>${sym}${Math.round(mv).toLocaleString()}</td>
+      <td class="${cls}" style="font-weight:500">${(pnl>=0?'+':'-')+sym+Math.abs(Math.round(pnl)).toLocaleString()}</td>
+      <td class="${cls}">${(pct>=0?'+':'')+pct.toFixed(2)}%</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Build multi-currency total display
+  const parts=[];
+  if(totalTWD!==0||holdings.some(h=>h.market==='tw'||h.market==='tw-dca')){
+    const cls=totalTWD>=0?'pos':'neg';
+    parts.push(`<span class="${cls}" style="font-size:13px;font-weight:600">${totalTWD>=0?'+':''}${Math.round(totalTWD).toLocaleString()}</span><span style="font-size:10px;color:var(--text3);margin-left:2px">TWD</span>`);
+  }
+  if(totalUSD!==0||holdings.some(h=>h.market==='us'||h.market==='us-dca')){
+    const cls=totalUSD>=0?'pos':'neg';
+    parts.push(`<span class="${cls}" style="font-size:13px;font-weight:600">${totalUSD>=0?'+':''}${Math.abs(totalUSD).toFixed(2)}</span><span style="font-size:10px;color:var(--text3);margin-left:2px">USD</span>`);
+  }
+  document.getElementById('unrealized-panel-total').innerHTML=parts.join('<span style="color:var(--text3);margin:0 6px;font-size:11px">·</span>');
+  document.getElementById('unrealized-panel-count').textContent=`共 ${holdings.length} 檔持倉`;
+}
+
+function renderRealizedTable(){
+  const avgTrack={};
+  const realizedRows=[];
+  trades.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(t=>{
+    const fee=computeFee(t);
+    if(!avgTrack[t.ticker]) avgTrack[t.ticker]={cost:0,shares:0};
+    if(t.type==='buy'){
+      const prev=avgTrack[t.ticker];
+      const nt=prev.cost*prev.shares+(t.price+fee/t.shares)*t.shares;
+      const ns=prev.shares+t.shares;
+      avgTrack[t.ticker]={cost:ns>0?nt/ns:0,shares:ns};
+    } else {
+      const costBasis=avgTrack[t.ticker].cost||t.price;
+      const pnl=(t.price-costBasis)*t.shares-fee;
+      const pct=(t.price-costBasis)/costBasis*100;
+      realizedRows.push({...t,fee,costBasis,pnl,pct});
+      avgTrack[t.ticker].shares-=t.shares;
+    }
+  });
+
+  const totalTWD=realizedRows.filter(r=>r.market==='tw'||r.market==='tw-dca').reduce((s,r)=>s+r.pnl,0);
+  const totalUSD=realizedRows.filter(r=>r.market==='us'||r.market==='us-dca').reduce((s,r)=>s+r.pnl,0);
+  const panelTotal=document.getElementById('realized-panel-total');
+  const parts=[];
+  if(realizedRows.some(r=>r.market==='tw'||r.market==='tw-dca')){
+    const cls=totalTWD>=0?'pos':'neg';
+    parts.push(`<span class="${cls}" style="font-size:13px;font-weight:600">${totalTWD>=0?'+':''}${Math.round(totalTWD).toLocaleString()}</span><span style="font-size:10px;color:var(--text3);margin-left:2px">TWD</span>`);
+  }
+  if(realizedRows.some(r=>r.market==='us'||r.market==='us-dca')){
+    const cls=totalUSD>=0?'pos':'neg';
+    parts.push(`<span class="${cls}" style="font-size:13px;font-weight:600">${totalUSD>=0?'+':''}${Math.abs(totalUSD).toFixed(2)}</span><span style="font-size:10px;color:var(--text3);margin-left:2px">USD</span>`);
+  }
+  panelTotal.innerHTML=parts.join('<span style="color:var(--text3);margin:0 6px;font-size:11px">·</span>');
+  document.getElementById('realized-panel-count').textContent=`共 ${realizedRows.length} 筆賣出`;
+
+  const tbody=document.getElementById('realized-table-body');
+  tbody.innerHTML='';
+  if(realizedRows.length===0){
+    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px">尚無已實現損益紀錄</td></tr>';
+    return;
+  }
+  realizedRows.sort((a,b)=>b.date.localeCompare(a.date)).forEach(r=>{
+    const isUS=r.market==='us'||r.market==='us-dca';
+    const sym=isUS?'$':'';
+    const cls=r.pnl>=0?'pos':'neg';
+    const mktLabel={tw:'台股',us:'美股','tw-dca':'台股定額','us-dca':'美股定額'}[r.market]||r.market;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${r.date}</td>
+      <td style="font-weight:500">${r.ticker}</td>
+      <td>${r.name}</td>
+      <td><span class="badge ${isUS?'badge-us':'badge-tw'}">${mktLabel}</span></td>
+      <td>${r.shares.toLocaleString()}</td>
+      <td style="color:var(--text2)">${sym}${r.costBasis.toFixed(2)}</td>
+      <td>${sym}${r.price.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+      <td style="color:var(--text2)">${sym}${r.fee.toFixed(isUS?2:0)}</td>
+      <td class="${cls}" style="font-weight:500">${(r.pnl>=0?'+':'-')+sym+Math.abs(Math.round(r.pnl)).toLocaleString()}</td>
+      <td class="${cls}">${(r.pct>=0?'+':'')+r.pct.toFixed(2)}%</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+let groupOpenState = {};
+let lastFiltered = [];
+
+function renderTradesTable() {
+  renderRealizedTable();
+  renderUnrealizedTable();
+  const rtTWD=getRealizedPnLByCurrency('tw');
+  const rtUSD=getRealizedPnLByCurrency('us');
+  const rtTWDHtml=`<span class="${rtTWD>=0?'pos':'neg'}">${rtTWD>=0?'+':''}${Math.round(rtTWD).toLocaleString()}</span><span style="font-size:11px;color:var(--text3)"> TWD</span>`;
+  const rtUSDHtml=`<span class="${rtUSD>=0?'pos':'neg'}">${rtUSD>=0?'+':''}${Math.abs(rtUSD).toFixed(2)}</span><span style="font-size:11px;color:var(--text3)"> USD</span>`;
+  const sellCount = trades.filter(t=>t.type==='sell').length;
+  const totalFees = trades.reduce((s,t)=>s+computeFee(t),0);
+  document.getElementById('realized-summary').innerHTML = `
+    <div class="metric"><div class="metric-label">已實現 TWD</div><div class="metric-value" style="font-size:17px">${rtTWDHtml}</div><div class="metric-change neutral">台股累計</div></div>
+    <div class="metric"><div class="metric-label">已實現 USD</div><div class="metric-value" style="font-size:17px">${rtUSDHtml}</div><div class="metric-change neutral">美股累計</div></div>
+    <div class="metric"><div class="metric-label">累計手續費</div><div class="metric-value">${Math.round(totalFees).toLocaleString()}</div><div class="metric-change neutral">買賣合計</div></div>
+  `;
+  const tickerSelect = document.getElementById('ticker-filter');
+  const tickers = [...new Set(trades.map(t=>t.ticker))].sort();
+  const currentVal = tickerSelect.value;
+  tickerSelect.innerHTML = '<option value="all">全部股票</option>' + tickers.map(tk=>`<option value="${tk}" ${tk===currentVal?'selected':''}>${tk}</option>`).join('');
+
+  // Pre-compute avg cost at sell
+  const avgTrack = {};
+  trades.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(t=>{
+    const fee=computeFee(t);
+    if(!avgTrack[t.ticker]) avgTrack[t.ticker]={cost:0,shares:0};
+    if(t.type==='buy'){
+      const prev=avgTrack[t.ticker];
+      const nt=prev.cost*prev.shares+(t.price+fee/t.shares)*t.shares;
+      const ns=prev.shares+t.shares;
+      avgTrack[t.ticker]={cost:ns>0?nt/ns:0,shares:ns};
+    } else {
+      t._avgBuyAtSell=avgTrack[t.ticker].cost||t.price;
+      avgTrack[t.ticker].shares=Math.max(0,avgTrack[t.ticker].shares-t.shares);
+    }
+  });
+
+  let filtered = trades.filter(t => {
+    const txt = tradeFilter.text.toLowerCase();
+    const matchText = !txt || t.ticker.toLowerCase().includes(txt) || t.name.toLowerCase().includes(txt);
+    const matchType = tradeFilter.type==='all' || t.type===tradeFilter.type;
+    const matchTicker = tradeFilter.ticker==='all' || t.ticker===tradeFilter.ticker;
+    return matchText && matchType && matchTicker;
+  });
+  lastFiltered = filtered;
+  renderGroupedTrades(filtered);
+}
+
+function renderGroupedTrades(filtered) {
+  const container = document.getElementById('grouped-trades-body');
+  if(!container) return;
+  container.innerHTML = '';
+
+  const groups = {};
+  filtered.forEach(t => {
+    if(!groups[t.ticker]) groups[t.ticker]={ticker:t.ticker,name:t.name,market:t.market,trades:[]};
+    groups[t.ticker].trades.push(t);
+  });
+  const sortedTickers = Object.keys(groups).sort((a,b)=>{
+    const latA=groups[a].trades.map(t=>t.date).sort().pop()||'';
+    const latB=groups[b].trades.map(t=>t.date).sort().pop()||'';
+    return latB.localeCompare(latA);
+  });
+
+  const holdings = getHoldings();
+
+  sortedTickers.forEach(tk => {
+    const g = groups[tk];
+    const isUS = g.market==='us'||g.market==='us-dca';
+    const sym = isUS?'$':'';
+    if(groupOpenState[tk]===undefined) groupOpenState[tk]=false; // default collapsed
+    const isOpen = groupOpenState[tk];
+
+    const cp = currentPrices[tk]||0;
+    const holding = holdings.find(h=>h.ticker===tk);
+    const sharesHeld = holding?holding.shares:0;
+    const avgCostPerShare = holding&&holding.shares>0?holding.totalCost/holding.shares:0;
+    const buyCount = g.trades.filter(t=>t.type==='buy').length;
+    const sellCount2 = g.trades.filter(t=>t.type==='sell').length;
+    const mktLabel = {tw:'台股',us:'美股','tw-dca':'台股定額','us-dca':'美股定額'}[g.market]||g.market;
+
+    let pnlHtml='';
+    if(sharesHeld>0 && cp>0) {
+      const pnlV=(cp-avgCostPerShare)*sharesHeld;
+      const pct=avgCostPerShare>0?(cp-avgCostPerShare)/avgCostPerShare*100:0;
+      const cls=pnlV>=0?'pos':'neg';
+      pnlHtml=`<span class="${cls}" style="font-size:13px;font-weight:600">${(pnlV>=0?'+':'')+sym+Math.round(Math.abs(pnlV)).toLocaleString()}</span>
+               <span class="${cls}" style="font-size:11px">&nbsp;${pct>=0?'+':''}${pct.toFixed(1)}%</span>`;
+    } else if(sharesHeld===0) {
+      pnlHtml=`<span style="font-size:11px;color:var(--text3)">已清倉</span>`;
+    }
+
+    const groupDiv = document.createElement('div');
+    groupDiv.className='trade-group';
+    groupDiv.innerHTML=`
+      <div class="trade-group-header ${isOpen?'open':''}" onclick="toggleGroup('${tk}',this)">
+        <div class="trade-group-left">
+          <span class="trade-group-arrow" style="transform:${isOpen?'rotate(90deg)':'rotate(0deg)'}">▶</span>
+          <div>
+            <div class="trade-group-ticker">${tk}&nbsp;<span class="badge ${isUS?'badge-us':'badge-tw'}" style="font-size:10px;vertical-align:middle">${mktLabel}</span></div>
+            <div class="trade-group-name">${g.name}</div>
+          </div>
+        </div>
+        <div class="trade-group-meta">
+          <div style="text-align:right">${pnlHtml}</div>
+          <span class="trade-group-count">${buyCount}買 ${sellCount2}賣 · ${g.trades.length}筆</span>
+        </div>
+      </div>
+      <div class="trade-group-body ${isOpen?'open':''}">
+        <div class="trade-group-body-inner">
+        <div class="trade-col-header">
+          <span class="tr-date">日期</span><span class="tr-type">類型</span><span class="tr-mkt">市場</span>
+          <span class="tr-shares">股數</span><span class="tr-price">成交價</span><span class="tr-cost">成本/股</span>
+          <span class="tr-fee">手續費</span><span class="tr-pnl">損益</span><span class="tr-pct">報酬率</span>
+        </div>
+        <div class="trade-rows-inner-${tk}"></div>
+        </div>
+      </div>
+    `;
+    container.appendChild(groupDiv);
+
+    const rowsContainer = groupDiv.querySelector(`.trade-rows-inner-${tk}`);
+    g.trades.slice().sort((a,b)=>b.date.localeCompare(a.date)).forEach(t=>{
+      const fee=computeFee(t);
+      const isBuy=t.type==='buy';
+      const costPerShare=isBuy?(t.price+fee/t.shares):null;
+      let pnlTxt='—',pctTxt='—',rowCls='neutral';
+      if(!isBuy&&t._avgBuyAtSell){
+        const pnlV=(t.price-t._avgBuyAtSell)*t.shares-fee;
+        const pctV=(t.price-t._avgBuyAtSell)/t._avgBuyAtSell*100;
+        rowCls=pnlV>=0?'pos':'neg';
+        pnlTxt=(pnlV>=0?'+':'')+sym+Math.abs(Math.round(pnlV)).toLocaleString();
+        pctTxt=(pctV>=0?'+':'')+pctV.toFixed(1)+'%';
+      }
+      const rowMkt={tw:'台股',us:'美股','tw-dca':'台股定額','us-dca':'美股定額'}[t.market]||t.market;
+      const row=document.createElement('div');
+      row.className='trade-row';
+      row.innerHTML=`
+        <span class="tr-date">${t.date}</span>
+        <span class="tr-type"><span class="badge ${isBuy?'badge-buy':'badge-sell'}">${isBuy?'買入':'賣出'}</span></span>
+        <span class="tr-mkt" style="font-size:11px;color:var(--text3)">${rowMkt}</span>
+        <span class="tr-shares">${t.shares}</span>
+        <span class="tr-price">${sym}${t.price.toLocaleString(undefined,{maximumFractionDigits:2})}</span>
+        <span class="tr-cost">${costPerShare?sym+costPerShare.toFixed(2):'—'}</span>
+        <span class="tr-fee">${sym}${fee.toFixed(isUS?2:0)}</span>
+        <span class="tr-pnl ${rowCls}">${pnlTxt}</span>
+        <span class="tr-pct ${rowCls}">${pctTxt}</span>
+      `;
+      rowsContainer.appendChild(row);
+    });
+  });
+}
+
+function toggleGroup(tk, headerEl){
+  groupOpenState[tk]=!groupOpenState[tk];
+  const open=groupOpenState[tk];
+  headerEl.classList.toggle('open',open);
+  headerEl.nextElementSibling.classList.toggle('open',open);
+  const arrow=headerEl.querySelector('.trade-group-arrow');
+  if(arrow) arrow.style.transform=open?'rotate(90deg)':'rotate(0deg)';
+}
+
+function toggleAllGroups(open){
+  Object.keys(groupOpenState).forEach(tk=>groupOpenState[tk]=open);
+  // also set all possible tickers
+  [...new Set(trades.map(t=>t.ticker))].forEach(tk=>groupOpenState[tk]=open);
+  renderGroupedTrades(lastFiltered.length?lastFiltered:trades);
+}
+
+function filterTrades(v){tradeFilter.text=v;renderTradesTable();}
+function filterTradeType(tp){tradeFilter.type=tp;renderTradesTable();}
+function filterTradesByTicker(v){tradeFilter.ticker=v;renderTradesTable();}
+function toggleDetail(btn){}
+
+// ══════════════════════════════════════════
+//  ADD TRADE
+// ══════════════════════════════════════════
+function openAddTrade(){
+  document.getElementById('add-trade-modal').style.display='flex';
+  document.getElementById('t-date').value=new Date().toISOString().split('T')[0];
+}
+function closeAddTrade(){document.getElementById('add-trade-modal').style.display='none';}
+
+function autoFeeModal(){
+  const mkt=document.getElementById('t-market').value;
+  const side=document.getElementById('t-type').value==='buy'?'buy':'sell';
+  const shares=parseFloat(document.getElementById('t-shares').value)||0;
+  const price=parseFloat(document.getElementById('t-price').value)||0;
+  const fee=calcFeeByMode(mkt,side,shares*price);
+  const isUS=mkt==='us'||mkt==='us-dca';
+  document.getElementById('t-fee').value=fee.toFixed(isUS?2:0);
+}
+
+function updateModalFeeHint(){
+  const mkt=document.getElementById('t-market').value;
+  const side=document.getElementById('t-type').value==='buy'?'buy':'sell';
+  const shares=parseFloat(document.getElementById('t-shares').value)||0;
+  const price=parseFloat(document.getElementById('t-price').value)||0;
+  if(shares>0&&price>0){
+    const fee=calcFeeByMode(mkt,side,shares*price);
+    const isUS=mkt==='us'||mkt==='us-dca';
+    document.getElementById('modal-fee-hint').textContent=`估計手續費：${isUS?'$':''}${fee.toFixed(isUS?2:0)}`;
+  } else {
+    document.getElementById('modal-fee-hint').textContent='輸入股數與成交價後估算';
+  }
+}
+
+function saveTrade(){
+  const ticker=document.getElementById('t-ticker').value.trim().toUpperCase();
+  const name=document.getElementById('t-name').value.trim();
+  const shares=parseFloat(document.getElementById('t-shares').value);
+  const price=parseFloat(document.getElementById('t-price').value);
+  const feeRaw=document.getElementById('t-fee').value;
+  if(!ticker||!shares||!price){alert('請填寫代號、股數、成交價');return;}
+  trades.push({id:tradeIdCounter++,date:document.getElementById('t-date').value,ticker,name:name||ticker,market:document.getElementById('t-market').value,type:document.getElementById('t-type').value,shares,price,fee:feeRaw?parseFloat(feeRaw):null});
+  closeAddTrade();
+  renderOverview(); renderTradesTable(); renderTax();
+  saveAllToCloud(); // 自動存到雲端
+}
+
+// ══════════════════════════════════════════
+//  FUND SOURCES
+// ══════════════════════════════════════════
+function renderFunds(){
+  const total=fundSources.reduce((s,f)=>s+f.amount,0);
+  document.getElementById('fund-total').textContent=total.toLocaleString();
+  document.getElementById('fund-count').textContent=fundSources.length+'個來源';
+  document.getElementById('fund-source-count').textContent=fundSources.length;
+  const largest=fundSources.reduce((a,b)=>b.amount>a.amount?b:a,fundSources[0]||{name:'—',amount:0});
+  document.getElementById('fund-largest').textContent=largest.name;
+  document.getElementById('fund-largest-pct').textContent='佔 '+(total>0?(largest.amount/total*100).toFixed(1):'0')+'%';
+  const list=document.getElementById('fund-list');
+  list.innerHTML='';
+  fundSources.forEach((f,i)=>{
+    const pct=total>0?(f.amount/total*100).toFixed(1):'0';
+    const d=document.createElement('div');
+    d.className='fund-item';
+    d.innerHTML=`<div class="fund-item-row"><div class="fund-dot" style="background:${f.color}"></div><div class="fund-name">${f.name}</div><div class="fund-amount">NT$${f.amount.toLocaleString()} · ${pct}%</div><button onclick="removeFund(${i})" style="background:none;border:1px solid rgba(153,60,29,.3);border-radius:4px;color:var(--red);cursor:pointer;font-size:11px;padding:2px 7px;font-family:inherit">×</button></div><div class="fund-bar-track"><div class="fund-bar-fill" style="background:${f.color};width:${pct}%"></div></div>`;
+    list.appendChild(d);
+  });
+}
+function addFundSource(){
+  const name=document.getElementById('fund-name-input').value.trim();
+  const amount=parseFloat(document.getElementById('fund-amt-input').value);
+  const color=document.getElementById('colorPicker').value;
+  if(!name||!amount){alert('請填寫名稱與金額');return;}
+  fundSources.push({name,amount,color});
+  document.getElementById('fund-name-input').value='';
+  document.getElementById('fund-amt-input').value='';
+  renderFunds();
+  saveAllToCloud(); // 自動存到雲端
+}
+function removeFund(i){if(confirm(`確定刪除「${fundSources[i].name}」？`)){fundSources.splice(i,1);renderFunds();saveAllToCloud();}}
+
+// ══════════════════════════════════════════
+//  TAX
+// ══════════════════════════════════════════
+function renderTax(){
+  const sellTW=trades.filter(t=>t.type==='sell'&&(t.market==='tw'||t.market==='tw-dca'));
+  const twTax=sellTW.reduce((s,t)=>s+t.price*t.shares*0.003,0);
+  const twFees=trades.filter(t=>t.market==='tw'||t.market==='tw-dca').reduce((s,t)=>s+computeFee(t),0);
+  const usFees=trades.filter(t=>t.market==='us'||t.market==='us-dca').reduce((s,t)=>s+computeFee(t),0);
+  const realized=getRealizedPnL();
+  document.getElementById('tax-tw').textContent=''+twTax.toFixed(0);
+  document.getElementById('tax-detail-tw').textContent=''+twTax.toFixed(0);
+  document.getElementById('tax-fee-tw').textContent='-'+twFees.toFixed(0);
+  document.getElementById('tax-fee-us').textContent='-$'+usFees.toFixed(2);
+  document.getElementById('tax-realized-tw').textContent=fmtPnl(realized);
+  document.getElementById('tax-realized-tw').className=realized>=0?'pos':'neg';
+  const now=new Date(); const dl=new Date(now.getFullYear(),4,31);
+  const days=Math.ceil((dl-now)/(864e5));
+  document.getElementById('tax-countdown').textContent=days>0?`距今 ${days} 天`:'已逾期';
+}
+
+// ══════════════════════════════════════════
+//  FEE SETTINGS
+// ══════════════════════════════════════════
+function saveFeeSettings(){
+  feeSettings.twBuyDiscount=parseFloat(document.getElementById('tw-buy-discount').value)||2.8;
+  feeSettings.twBuyMin=parseFloat(document.getElementById('tw-buy-min').value)||1;
+  feeSettings.twSellDiscount=parseFloat(document.getElementById('tw-sell-discount').value)||2.8;
+  feeSettings.twSellMin=parseFloat(document.getElementById('tw-sell-min').value)||1;
+  feeSettings.twDcaBuyRate=parseFloat(document.getElementById('tw-dca-buy-rate').value)||0.2;
+  feeSettings.twDcaBuyMin=parseFloat(document.getElementById('tw-dca-buy-min').value)||1;
+  feeSettings.twDcaSellRate=parseFloat(document.getElementById('tw-dca-sell-rate').value)||0.2;
+  feeSettings.twDcaSellMin=parseFloat(document.getElementById('tw-dca-sell-min').value)||1;
+  feeSettings.usBuyRate=parseFloat(document.getElementById('us-buy-rate').value)||0.15;
+  feeSettings.usBuyMin=parseFloat(document.getElementById('us-buy-min').value)||1;
+  feeSettings.usBuyNormalMin=parseFloat(document.getElementById('us-buy-normal-min').value)||15;
+  feeSettings.usSellRate=parseFloat(document.getElementById('us-sell-rate').value)||0.15;
+  feeSettings.usSellMin=parseFloat(document.getElementById('us-sell-min').value)||1;
+  feeSettings.usDcaBuyRate=parseFloat(document.getElementById('us-dca-buy-rate').value)||0.2;
+  feeSettings.usDcaBuyMin=parseFloat(document.getElementById('us-dca-buy-min').value)||1;
+  feeSettings.usDcaSellRate=parseFloat(document.getElementById('us-dca-sell-rate').value)||0.2;
+  feeSettings.usDcaSellMin=parseFloat(document.getElementById('us-dca-sell-min').value)||1;
+  // Update preview
+  const br=(0.001425*(feeSettings.twBuyDiscount/10)*100).toFixed(4);
+  const sr=(0.001425*(feeSettings.twSellDiscount/10)*100).toFixed(4);
+  document.getElementById('tw-buy-preview').textContent=`實際費率：0.1425% × ${(feeSettings.twBuyDiscount/10).toFixed(2)} = ${br}%`;
+  document.getElementById('tw-sell-preview').textContent=`實際費率：0.1425% × ${(feeSettings.twSellDiscount/10).toFixed(2)} = ${sr}%`;
+  renderOverview(); renderTradesTable(); renderTax();
+  const msg=document.getElementById('fee-saved-msg');
+  msg.textContent='✓ 已儲存，損益已重算';
+  setTimeout(()=>msg.textContent='',3000);
+  saveAllToCloud(); // 自動存到雲端
+}
+
+function calcFee(){
+  const mode=document.getElementById('calc-market').value;
+  const side=document.getElementById('calc-side').value;
+  const amount=parseFloat(document.getElementById('calc-amount').value)||0;
+  if(!amount){document.getElementById('calc-result').textContent='選擇模式並輸入金額後自動試算';return;}
+  const fee=calcFeeByMode(mode,side,amount);
+  const isUS=mode==='us'||mode==='us-dca';
+  const sym=isUS?'$':'';
+  const pct=(fee/amount*100).toFixed(4);
+  document.getElementById('calc-result').textContent=`手續費：${sym}${fee.toFixed(isUS?2:0)}（${pct}%）`;
+  if(side==='sell'&&(mode==='tw'||mode==='tw-dca')){
+    const tax=amount*0.003;
+    document.getElementById('calc-result').textContent+=`　＋　證交稅：${tax.toFixed(0)}（0.3%）　合計：${(fee+tax).toFixed(0)}`;
+  }
+}
+
+// ══════════════════════════════════════════
+//  LIVE PRICES – TWSE
+// ══════════════════════════════════════════
+async function fetchTWSEPrices(tickers){
+  const twTickers = tickers.filter(tk => /^\d{4,}/.test(tk) || tk==='0050'||tk==='0056');
+  if(twTickers.length===0) return {};
+  const results = {};
+  for(const tk of twTickers){
+    try{
+      const url=`https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_${tk}.tw&json=1&delay=0&_=${Date.now()}`;
+      const res=await fetch(url);
+      const data=await res.json();
+      if(data.msgArray&&data.msgArray[0]){
+        const item=data.msgArray[0];
+        const price=parseFloat(item.z)||parseFloat(item.y)||0;
+        if(price>0) results[tk]=price;
+      }
+    }catch(e){}
+  }
+  return results;
+}
+
+// ══════════════════════════════════════════
+//  LIVE PRICES – FINNHUB
+// ══════════════════════════════════════════
+async function fetchFinnhubPrice(ticker){
+  if(!finnhubKey) return null;
+  try{
+    const url=`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${finnhubKey}`;
+    const res=await fetch(url);
+    const data=await res.json();
+    if(data.c && data.c>0) return data.c;
+  }catch(e){}
+  return null;
+}
+
+async function refreshAllPrices(){
+  const holdings=getHoldings();
+  const allTickers=holdings.map(h=>h.ticker);
+  const dot=document.getElementById('api-dot');
+  const label=document.getElementById('api-label');
+  dot.className='api-dot loading'; label.textContent='更新中…';
+
+  let updated=0;
+  // Taiwan
+  const twPrices=await fetchTWSEPrices(allTickers);
+  Object.entries(twPrices).forEach(([tk,p])=>{
+    currentPrices[tk]=p; updated++;
+  });
+  // US stocks via Finnhub
+  const usTickers=holdings.filter(h=>h.market==='us'||h.market==='us-dca').map(h=>h.ticker);
+  for(const tk of usTickers){
+    const p=await fetchFinnhubPrice(tk);
+    if(p){ currentPrices[tk]=p; updated++; }
+  }
+
+  renderOverview(); renderTradesTable(); renderTax();
+  const now=new Date();
+  const timeStr=now.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('last-update-time').textContent=`報價更新 ${timeStr}`;
+
+  if(updated>0){
+    dot.className='api-dot ok'; label.textContent=`已更新 ${updated} 檔`;
+  } else {
+    dot.className='api-dot err'; label.textContent='更新失敗';
+  }
+  setTimeout(()=>{dot.className='api-dot';label.textContent='報價未自動刷新';},8000);
+}
+
+// ══════════════════════════════════════════
+//  API SETTINGS PAGE
+// ══════════════════════════════════════════
+function openApiSettings(){
+  if(finnhubKey) document.getElementById('finnhub-key').value=finnhubKey;
+  document.getElementById('api-modal').style.display='flex';
+}
+
+function saveFinnhubKey(){
+  finnhubKey=document.getElementById('finnhub-key').value.trim();
+  localStorage.setItem('finnhub_key',finnhubKey);
+  document.getElementById('finnhub-dot').className='api-dot';
+  document.getElementById('finnhub-label').textContent='已儲存，請測試連線';
+  saveAllToCloud(); // 把 API key 也存到雲端，換裝置不用重填
+}
+
+async function testTWSE(){
+  document.getElementById('twse-dot').className='api-dot loading';
+  document.getElementById('twse-label').textContent='測試中…';
+  const prices=await fetchTWSEPrices(['2330']);
+  if(prices['2330']){
+    document.getElementById('twse-dot').className='api-dot ok';
+    document.getElementById('twse-label').textContent=`連線正常 · 台積電 ${prices['2330']}`;
+  } else {
+    document.getElementById('twse-dot').className='api-dot err';
+    document.getElementById('twse-label').textContent='連線失敗（可能受 CORS 限制）';
+  }
+}
+
+async function testFinnhub(){
+  if(!finnhubKey){document.getElementById('finnhub-label').textContent='請先輸入 API key';return;}
+  document.getElementById('finnhub-dot').className='api-dot loading';
+  document.getElementById('finnhub-label').textContent='測試中…';
+  const p=await fetchFinnhubPrice('AAPL');
+  if(p){
+    document.getElementById('finnhub-dot').className='api-dot ok';
+    document.getElementById('finnhub-label').textContent=`連線正常 · AAPL $${p}`;
+  } else {
+    document.getElementById('finnhub-dot').className='api-dot err';
+    document.getElementById('finnhub-label').textContent='連線失敗，請確認 API key';
+  }
+}
+
+// ══════════════════════════════════════════
+//  REPORT CHART
+// ══════════════════════════════════════════
+function renderReportChart(){
+  if(reportChartInst) return;
+  reportChartInst=new Chart(document.getElementById('reportChart'),{
+    type:'bar',
+    data:{labels:['Q1 2024','Q2 2024','Q3 2024','Q4 2024','Q1 2025'],
+      datasets:[{label:'報酬率%',data:[4.2,7.8,-1.3,8.5,3.2],backgroundColor:['#185FA5','#185FA5','#993C1D','#185FA5','#185FA5'],borderRadius:4,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#999',font:{size:11},autoSkip:false}},
+        y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#999',font:{size:11},callback:v=>v+'%'}}}}
+  });
+}
+
+// ══════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════
+const pageMeta={
+  overview:{title:'投資組合總覽'},trades:{title:'帳務交易紀錄'},
+  funds:{title:'資金來源管理'},notes:{title:'投資策略筆記'},
+  tax:{title:'稅務試算'},fees:{title:'手續費設定'},
+  reports:{title:'報表匯出'},
+};
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('page-title').textContent=pageMeta[id].title;
+  closeSidebar();
+  if(id==='reports') renderReportChart();
+}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
+
+// ══════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════
+function fmtPnl(v){return (v>=0?'+':'-')+Math.abs(Math.round(v)).toLocaleString();}
+
+// ══════════════════════════════════════════
+//  FIREBASE — 連接雲端資料庫
+// ══════════════════════════════════════════
+// 這段是「門牌號碼」，告訴網頁要去哪個 Firebase 帳戶存取資料
+const firebaseConfig = {
+  apiKey: "AIzaSyAimzheMaWzLksTHnlNtvM74wjOnLAAFas",
+  authDomain: "investment-tracker-cb125.firebaseapp.com",
+  projectId: "investment-tracker-cb125",
+  storageBucket: "investment-tracker-cb125.firebasestorage.app",
+  messagingSenderId: "550220720709",
+  appId: "1:550220720709:web:7db109af17c4ad1ef2112c"
+};
+
+// 初始化 Firebase（就是「開門」的動作）
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ── 顯示雲端連線狀態 ──
+function setCloudStatus(status, msg) {
+  const dot = document.getElementById('api-dot');
+  const label = document.getElementById('api-label');
+  if(status==='ok'){dot.className='api-dot ok';label.textContent=msg||'雲端已同步';}
+  else if(status==='loading'){dot.className='api-dot loading';label.textContent=msg||'同步中…';}
+  else{dot.className='api-dot err';label.textContent=msg||'雲端連線失敗';}
+}
+
+// ── 儲存所有資料到 Firebase ──
+// 就像按下 Google Docs 的「儲存」，把目前所有資料寫進雲端
+async function saveAllToCloud() {
+  setCloudStatus('loading','儲存中…');
+  try {
+    await db.collection('data').doc('main').set({
+      trades: trades,
+      fundSources: fundSources,
+      feeSettings: feeSettings,
+      currentPrices: currentPrices,
+      finnhubKey: finnhubKey,
+      updatedAt: new Date().toISOString()
+    });
+    setCloudStatus('ok','已儲存 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}));
+  } catch(e) {
+    setCloudStatus('err','儲存失敗：'+e.message);
+    console.error('Firebase save error:',e);
+  }
+}
+
+// ── 從 Firebase 讀取資料 ──
+// 就像打開 Google Docs，把上次存的內容全部抓回來
+async function loadFromCloud() {
+  setCloudStatus('loading','載入資料…');
+  try {
+    const doc = await db.collection('data').doc('main').get();
+    if(doc.exists) {
+      const d = doc.data();
+      if(d.trades && d.trades.length>0) {
+        trades = d.trades;
+        tradeIdCounter = Math.max(...trades.map(t=>t.id||0)) + 1;
+      }
+      if(d.fundSources) fundSources = d.fundSources;
+      if(d.feeSettings) feeSettings = {...feeSettings, ...d.feeSettings};
+      if(d.currentPrices) currentPrices = {...currentPrices, ...d.currentPrices};
+      if(d.finnhubKey) {
+        finnhubKey = d.finnhubKey;
+        localStorage.setItem('finnhub_key', finnhubKey);
+      }
+      setCloudStatus('ok','資料已載入');
+    } else {
+      // 第一次使用，雲端還沒有資料，把現有的預設資料存上去
+      setCloudStatus('loading','首次使用，上傳預設資料…');
+      await saveAllToCloud();
+    }
+  } catch(e) {
+    setCloudStatus('err','載入失敗，使用本地資料');
+    console.error('Firebase load error:',e);
+  }
+  // 資料載入後，渲染所有畫面
+  renderOverview();
+  renderTradesTable();
+  renderFunds();
+  renderTax();
+  refreshAllPrices();
+}
+
+// ══════════════════════════════════════════
+//  INIT — 啟動程序
+// ══════════════════════════════════════════
+// 網頁打開時，先從雲端抓資料，再顯示畫面
+loadFromCloud();
+</script>
+</body>
+</html>
