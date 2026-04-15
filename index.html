@@ -1045,6 +1045,8 @@ async function getAiSuggestion() {
   const unrealized=totalMV-totalCost;
   const btn=document.getElementById('ai-btn');
   const out=document.getElementById('ai-output');
+  btn.disabled=true; btn.textContent='分析中…';
+  out.innerHTML='<span style="color:var(--text3)">AI 正在分析你的持倉，請稍候…</span>';
 
   const holdingsSummary=holdings.map(h=>{
     const cp=currentPrices[h.ticker]||0;
@@ -1054,8 +1056,6 @@ async function getAiSuggestion() {
     return `${h.ticker}(${h.name}) 持${h.shares}股 均價${avg.toFixed(0)} 現價${cp} 報酬率${pct.toFixed(1)}% 市值佔比${totalMV>0?(mv/totalMV*100).toFixed(1):'?'}%`;
   }).join('\n');
 
-  // AI 建議需要後端中繼才能運作（瀏覽器直接呼叫 Anthropic API 會被 CORS 擋住）
-  // 以下是複製給 Claude 用的提示詞，可以直接貼到 claude.ai
   const prompt=`你是一位台灣投資顧問，請用繁體中文分析以下投資組合，給出3點簡短觀察與建議（每點2-3句話，不要用過多專業術語，要像朋友聊天一樣直白）。
 
 持倉資訊：
@@ -1068,14 +1068,20 @@ ${holdingsSummary}
 
 請聚焦在：集中度風險、個股表現異常、整體配置是否平衡。最後加一行免責聲明。`;
 
-  out.innerHTML=`
-    <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;line-height:1.7">
-      <div style="font-weight:600;margin-bottom:8px;color:var(--text2)">💡 AI 建議功能說明</div>
-      <div style="color:var(--text2);margin-bottom:10px">直接從瀏覽器呼叫 AI 會被安全機制擋住，需要設定後端中繼。在那之前，可以把以下提示詞複製到 <a href="https://claude.ai" target="_blank" style="color:var(--blue)">claude.ai</a> 取得分析：</div>
-      <textarea readonly style="width:100%;height:120px;font-size:11px;padding:8px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);resize:none;font-family:inherit">${prompt}</textarea>
-      <button class="btn btn-sm" style="margin-top:8px" onclick="navigator.clipboard.writeText(this.previousElementSibling.value);this.textContent='已複製！';setTimeout(()=>this.textContent='複製提示詞',2000)">複製提示詞</button>
-    </div>`;
-  btn.textContent='重新整理';
+  try{
+    const res = await fetch(`${PROXY}?action=ai`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '無法取得建議，請稍後再試。';
+    const formatted = text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+    out.innerHTML = formatted;
+  }catch(e){
+    out.innerHTML=`<span style="color:var(--red)">連線失敗：${e.message}</span>`;
+  }
+  btn.disabled=false; btn.textContent='重新分析';
 }
 
 function renderLineChart() {
@@ -1643,25 +1649,19 @@ function calcFee(){
 // ══════════════════════════════════════════
 //  LIVE PRICES – TWSE
 // ══════════════════════════════════════════
+// Cloudflare Workers 中繼網址
+const PROXY = 'https://investment-proxy.j050311.workers.dev';
+
 async function fetchTWSEPrices(tickers){
-  // TWSE API 有 CORS 限制，在 GitHub Pages 上無法直接呼叫
-  // 需要 Cloudflare Workers 中繼才能運作（後續設定）
   const twTickers = tickers.filter(tk => /^\d{4}/.test(tk));
   if(twTickers.length===0) return {};
   const results = {};
   for(const tk of twTickers){
     try{
-      const url=`https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=tse_${tk}.tw&json=1&delay=0&_=${Date.now()}`;
-      const res=await fetch(url);
-      const data=await res.json();
-      if(data.msgArray&&data.msgArray[0]){
-        const item=data.msgArray[0];
-        const price=parseFloat(item.z)||parseFloat(item.y)||0;
-        if(price>0) results[tk]=price;
-      }
-    }catch(e){
-      // 靜默失敗，CORS 限制導致，需要後端中繼
-    }
+      const res = await fetch(`${PROXY}?action=twse&ticker=${tk}`);
+      const data = await res.json();
+      if(data.price > 0) results[tk] = data.price;
+    }catch(e){}
   }
   return results;
 }
