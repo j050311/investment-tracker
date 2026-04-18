@@ -1156,22 +1156,18 @@ function renderOverview() {
   const holdings = getHoldings();
   const realizedTotal = getRealizedPnL();
 
-  // Split by currency
+  // Split by currency — gold (market=gold) counted in TWD
   let totalMV_TWD=0, totalMV_USD=0, totalCost_TWD=0, totalCost_USD=0;
   holdings.forEach(h => {
-    const cp = currentPrices[h.ticker] || 0;
     const isUS = h.market==='us'||h.market==='us-dca';
+    const isGold = h.market==='gold';
+    let cp;
+    if(isGold) cp = currentPrices['GOLD_TRADE'] || currentPrices[h.ticker] || 0;
+    else cp = currentPrices[h.ticker] || 0;
     if(isUS){ totalMV_USD+=cp*h.shares; totalCost_USD+=h.totalCost; }
     else { totalMV_TWD+=cp*h.shares; totalCost_TWD+=h.totalCost; }
   });
-  // Add gold to TWD totals
-  const goldMV = goldAssets.reduce((s,g)=>{
-    const cp = currentPrices['GOLD_'+g.id]||g.avgPrice;
-    return s + cp*g.grams;
-  },0);
-  const goldCost = goldAssets.reduce((s,g)=>s+g.avgPrice*g.grams,0);
-  totalMV_TWD += goldMV;
-  totalCost_TWD += goldCost;
+  // goldAssets system retired — no longer add to totals
 
   const totalMV = totalMV_TWD + totalCost_USD; // for bar (approximate)
   const unrealized = (totalMV_TWD - totalCost_TWD) + (totalMV_USD - totalCost_USD);
@@ -1221,13 +1217,18 @@ function renderOverview() {
   // Allocation horizontal bar
   const allocBar = document.getElementById('alloc-bar');
   const allocLegend = document.getElementById('alloc-legend');
-  const allMV = [...holdings.map(h=>({ticker:h.ticker,mv:(currentPrices[h.ticker]||0)*h.shares})),
-    ...goldAssets.map(g=>({ticker:'黃金存摺',mv:(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams}))];
+  const allMV = holdings.map(h=>{
+    const isGold = h.market==='gold';
+    const mv = isGold
+      ? (currentPrices['GOLD_TRADE']||currentPrices[h.ticker]||0)*h.shares
+      : (currentPrices[h.ticker]||0)*h.shares;
+    return {ticker:h.ticker, mv, isGold};
+  });
   const totalMV2 = allMV.reduce((s,x)=>s+x.mv,0)||1;
   allocBar.innerHTML=''; allocLegend.innerHTML='';
   allMV.forEach((x,i)=>{
     const pct=x.mv/totalMV2*100;
-    const col=i===allMV.length-1&&goldAssets.length>0?'#EF9F27':PALETTE[i%PALETTE.length];
+    const col=x.isGold?'#EF9F27':PALETTE[i%PALETTE.length];
     const seg=document.createElement('div');
     seg.style.cssText=`width:${pct}%;background:${col};height:28px;`;
     seg.title=`${x.ticker}: ${pct.toFixed(1)}%`;
@@ -1241,31 +1242,43 @@ function renderOverview() {
   const grid = document.getElementById('holdings-grid');
   grid.innerHTML = '';
   holdings.forEach(h => {
-    const cp = currentPrices[h.ticker] || 0;
+    const isGold = h.market === 'gold';
+    const isUS = h.market==='us'||h.market==='us-dca';
+    // For gold via trades, use shared gold price key 'GOLD_TRADE' or fallback to avg
+    let cp;
+    if(isGold) {
+      cp = currentPrices['GOLD_TRADE'] || currentPrices[h.ticker] || 0;
+    } else {
+      cp = currentPrices[h.ticker] || 0;
+    }
     const avg = h.shares > 0 ? h.totalCost / h.shares : 0;
     const pnl = (cp - avg) * h.shares;
     const pct = avg > 0 ? (cp - avg)/avg*100 : 0;
     const pnlCls = pnl >= 0 ? 'pos' : 'neg';
-    const isUS = h.market==='us'||h.market==='us-dca';
     const sym = isUS ? '$' : '';
     const card = document.createElement('div');
     card.className = 'holding-card';
-    // Format PnL without NT$
     const pnlAmt = (pnl>=0?'+':'-') + sym + Math.abs(Math.round(pnl)).toLocaleString();
     const pnlPctStr = (pct>=0?'+':'') + pct.toFixed(1) + '%';
-    const priceStr = sym + cp.toLocaleString(undefined,{maximumFractionDigits:2});
-    const avgStr = sym + avg.toFixed(2);
+    const priceStr = isGold ? cp.toLocaleString(undefined,{maximumFractionDigits:0}) : sym + cp.toLocaleString(undefined,{maximumFractionDigits:2});
+    const avgStr = isGold ? avg.toFixed(2) : sym + avg.toFixed(2);
+    // Badge
+    const badgeHtml = isGold
+      ? `<span class="badge" style="background:#FFF3CD;color:#856404">貴金屬</span>`
+      : isUS ? `<span class="badge badge-us">美股</span>` : `<span class="badge badge-tw">台股</span>`;
+    // Price key for inline edit
+    const priceKey = isGold ? 'GOLD_TRADE' : h.ticker;
     card.innerHTML = `
       <div class="holding-top">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px">
           <div>
-            <div class="holding-ticker">${h.ticker} <span class="badge ${isUS?'badge-us':'badge-tw'}">${isUS?'美股':'台股'}</span></div>
+            <div class="holding-ticker">${h.ticker} ${badgeHtml}</div>
             <div class="holding-name">${h.name}</div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">現價</div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">${isGold?'現價/克':'現價'}</div>
             <div style="font-size:13px;font-weight:500;color:var(--text2)" id="card-price-${h.ticker}">
-              <span class="editable-price" onclick="editPrice('${h.ticker}',this)" title="點擊更新">${priceStr}</span>
+              <span class="editable-price" onclick="editPrice('${priceKey}',this)" title="點擊更新">${priceStr}</span>
             </div>
           </div>
         </div>
@@ -1286,7 +1299,7 @@ function renderOverview() {
         </div>
         <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid rgba(0,0,0,.07)">
           <div style="font-size:11px;color:#777">均價 <span style="color:var(--text);font-weight:500">${avgStr}</span></div>
-          <div style="font-size:11px;color:#777">持有 <span style="color:var(--text);font-weight:500">${h.shares.toLocaleString()} ${h.market==='gold'?'克':'股'}</span></div>
+          <div style="font-size:11px;color:#777">持有 <span style="color:var(--text);font-weight:500">${h.shares.toLocaleString()} ${isGold?'克':'股'}</span></div>
         </div>
       </div>
     `;
@@ -1357,60 +1370,10 @@ function applyAssetTab() {
 }
 
 function renderGoldOverviewCards() {
+  // Gold is now managed via trades (market=gold), not goldAssets
+  // goldAssets system is retired - show nothing
   const container = document.getElementById('gold-cards-overview');
-  if(!container) return;
-  container.innerHTML = '';
-  if(goldAssets.length === 0) return;
-  // Group all gold into one summary card
-  const totalGrams = goldAssets.reduce((s,g)=>s+g.grams, 0);
-  const totalCost = goldAssets.reduce((s,g)=>s+g.avgPrice*g.grams, 0);
-  const totalMV = goldAssets.reduce((s,g)=>{
-    const cp = currentPrices['GOLD_'+g.id] || g.avgPrice;
-    return s + cp*g.grams;
-  }, 0);
-  const pnl = totalMV - totalCost;
-  const pct = totalCost>0 ? pnl/totalCost*100 : 0;
-  const avg = totalGrams>0 ? totalCost/totalGrams : 0;
-  const currentAvg = totalGrams>0 ? totalMV/totalGrams : 0;
-  const pnlCls = pnl>=0?'pos':'neg';
-
-  const card = document.createElement('div');
-  card.className = 'holding-card';
-  card.style.marginBottom = '10px';
-  card.innerHTML = `
-    <div class="holding-top">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px">
-        <div>
-          <div class="holding-ticker">黃金存摺 <span class="badge" style="background:#FFF3CD;color:#856404;font-size:10px">貴金屬</span></div>
-          <div class="holding-name">${totalGrams.toFixed(2)} 公克 · ${goldAssets.length}筆</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">現價/克</div>
-          <div style="font-size:13px;font-weight:500;color:var(--text2)" onclick="openGoldPricePage()" title="點擊前往更新" style="cursor:pointer">${Math.round(currentAvg).toLocaleString()}</div>
-        </div>
-      </div>
-      <div class="pnl-bar-track">
-        <div class="pnl-bar-fill" style="width:${Math.min(Math.abs(pct)*2,100)}%;background:${pnl>=0?'var(--up)':'var(--down)'}"></div>
-      </div>
-    </div>
-    <div class="holding-bottom">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div>
-          <div style="font-size:10px;color:#777;font-weight:500;margin-bottom:3px">損益金額</div>
-          <div style="font-size:17px;font-weight:700" class="${pnlCls}">${(pnl>=0?'+':'')}${Math.round(pnl).toLocaleString()}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:10px;color:#777;font-weight:500;margin-bottom:3px">報酬率</div>
-          <div style="font-size:17px;font-weight:700" class="${pnlCls}">${pct>=0?'+':''}${pct.toFixed(1)}%</div>
-        </div>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid rgba(0,0,0,.07)">
-        <div style="font-size:11px;color:#777">均價 <span style="color:var(--text);font-weight:500">${Math.round(avg).toLocaleString()}/克</span></div>
-        <div style="font-size:11px;color:#777">市值 <span style="color:var(--text);font-weight:500">${Math.round(totalMV).toLocaleString()}</span></div>
-      </div>
-    </div>
-  `;
-  container.appendChild(card);
+  if(container) container.innerHTML = '';
 }
 
 function openGoldPricePage() {
@@ -1427,20 +1390,20 @@ function renderPieChart(holdings) {
   if(currentPieMode === 'market') {
     const tw = holdings.filter(h=>h.market==='tw'||h.market==='tw-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0);
     const us = holdings.filter(h=>h.market==='us'||h.market==='us-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0);
-    const gold = goldAssets.reduce((s,g)=>s+(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams,0);
-    labels=['台股','美股','其他（黃金）']; data=[tw,us,gold]; colors=['#185FA5','#8E44AD','#E67E22'];
+    const gold = holdings.filter(h=>h.market==='gold').reduce((s,h)=>s+(currentPrices['GOLD_TRADE']||currentPrices[h.ticker]||0)*h.shares,0);
+    labels=['台股','美股','貴金屬']; data=[tw,us,gold]; colors=['#185FA5','#8E44AD','#EF9F27'];
   } else if(currentPieMode === 'currency') {
-    const twd = holdings.filter(h=>h.market==='tw'||h.market==='tw-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0)
-      + goldAssets.reduce((s,g)=>s+(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams,0);
+    const twd = holdings.filter(h=>h.market==='tw'||h.market==='tw-dca'||h.market==='gold').reduce((s,h)=>{
+      const cp=h.market==='gold'?(currentPrices['GOLD_TRADE']||0):(currentPrices[h.ticker]||0);
+      return s+cp*h.shares;
+    },0);
     const usd = holdings.filter(h=>h.market==='us'||h.market==='us-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0);
     labels=['TWD','USD']; data=[twd,usd]; colors=['#185FA5','#D35400'];
   } else if(currentPieMode === 'risk') {
-    // 風險分布：成長資產(股票) / 防禦資產(黃金、ETF) / 現金
-    const growth = holdings.filter(h=>!['0050','0056'].includes(h.ticker)&&(h.market==='tw'||h.market==='us'||h.market==='us-dca'||h.market==='tw-dca'))
-      .reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0);
+    const growth = holdings.filter(h=>!['0050','0056'].includes(h.ticker)&&h.market!=='gold').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0);
     const defensive = holdings.filter(h=>['0050','0056'].includes(h.ticker)).reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0)
-      + goldAssets.reduce((s,g)=>s+(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams,0);
-    const cash = 0; // 現金目前無記錄
+      + holdings.filter(h=>h.market==='gold').reduce((s,h)=>s+(currentPrices['GOLD_TRADE']||0)*h.shares,0);
+    const cash = 0;
     labels=['成長資產','防禦資產','現金']; data=[growth,defensive,cash]; colors=['#C0392B','#185FA5','#27AE60'];
   }
 
@@ -1652,15 +1615,10 @@ function renderUnrealizedTable(){
 
   holdings.forEach(h=>{
     const isGold = h.market==='gold';
-    // Gold uses per-entry currentPrices keyed by GOLD_id — use average
+    // Gold uses GOLD_TRADE price key
     let cp;
     if(isGold){
-      const goldEntries = goldAssets.filter(g=>g.ticker===h.ticker||h.ticker==='GOLD');
-      if(goldEntries.length>0){
-        const totalMV = goldEntries.reduce((s,g)=>(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams+s,0);
-        const totalG = goldEntries.reduce((s,g)=>s+g.grams,0);
-        cp = totalG>0 ? totalMV/totalG : 0;
-      } else cp = currentPrices[h.ticker]||0;
+      cp = currentPrices['GOLD_TRADE'] || currentPrices[h.ticker] || 0;
     } else {
       cp = currentPrices[h.ticker]||0;
     }
@@ -2490,13 +2448,9 @@ function renderAssets(){
   let pTWD=0,pUSD=0;
   holdings.forEach(h=>{
     const isGold=h.market==='gold';
-    let cp=0;
-    if(isGold){
-      const totalMV=goldAssets.reduce((s,g)=>s+(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams,0);
-      const totalG=goldAssets.reduce((s,g)=>s+g.grams,0);
-      cp=totalG>0?totalMV/totalG:0;
-    } else cp=currentPrices[h.ticker]||0;
     const isUS=h.market==='us'||h.market==='us-dca';
+    const cp = isGold ? (currentPrices['GOLD_TRADE']||currentPrices[h.ticker]||0)
+                      : (currentPrices[h.ticker]||0);
     if(isUS) pUSD+=cp*h.shares; else pTWD+=cp*h.shares;
   });
   const pTotal=pTWD+pUSD*FX_RATES.USD;
@@ -2543,7 +2497,7 @@ function renderAssets(){
     [
       {label:'台股',value:holdings.filter(h=>h.market==='tw'||h.market==='tw-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0)},
       {label:'美股',value:pUSD*FX_RATES.USD},
-      {label:'黃金存摺',value:goldAssets.reduce((s,g)=>s+(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams,0)}
+      {label:'黃金存摺',value:holdings.filter(h=>h.market==='gold').reduce((s,h)=>s+(currentPrices['GOLD_TRADE']||currentPrices[h.ticker]||0)*h.shares,0)}
     ].filter(c=>c.value>0).forEach(c=>{
       const chip=document.createElement('div');
       chip.style.cssText='padding:6px 12px;background:var(--bg3);border-radius:20px;font-size:12px;color:var(--text2)';
@@ -2660,13 +2614,15 @@ async function refreshAllPrices(){
     if(p){ currentPrices[tk]=p; updated++; }
   }
 
-  // Gold price from Taiwan Bank via Worker
-  if(goldAssets.length>0){
+  // Gold price from Taiwan Bank via Worker — for trade-based gold (market=gold)
+  const hasGoldTrades = trades.some(t=>t.market==='gold');
+  if(hasGoldTrades){
     try{
       const res=await fetch(`${PROXY}?action=gold`);
       const data=await res.json();
       if(data.price>0){
-        // Apply same price to all gold entries
+        currentPrices['GOLD_TRADE'] = data.price;
+        // Also update old goldAssets if any
         goldAssets.forEach(g=>{ currentPrices['GOLD_'+g.id]=data.price; });
         updated++;
       }
