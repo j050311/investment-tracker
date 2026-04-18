@@ -277,6 +277,10 @@ tr:hover td{background:var(--bg3)}
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v6M5.5 7.5L8 5l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         資金來源
       </div>
+      <div class="nav-item" onclick="showPage('gold',this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M3 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        黃金存摺
+      </div>
       <div class="nav-section">工具</div>
       <div class="nav-item" onclick="showPage('notes',this)">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M3 2h8l2 2v10H3V2z" stroke="currentColor" stroke-width="1.3"/><path d="M6 6h4M6 9h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -484,7 +488,14 @@ tr:hover td{background:var(--bg3)}
         </div>
 
         <!-- 各大項目 -->
-        <div id="fund-groups"></div>
+        <div class="charts-row" style="margin-bottom:14px">
+          <div id="fund-groups" style="display:flex;flex-direction:column;gap:0"></div>
+          <div class="card" style="align-self:start">
+            <div class="card-title">來源佔比</div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px" id="fund-pie-legend"></div>
+            <div style="position:relative;height:180px"><canvas id="fundPieChart"></canvas></div>
+          </div>
+        </div>
 
         <!-- 新增大項目 -->
         <div class="card" style="margin-bottom:14px">
@@ -502,9 +513,52 @@ tr:hover td{background:var(--bg3)}
 
       <!-- ══ 策略筆記 ══ -->
       <div class="page" id="page-notes">
-        <div class="search-row"><input type="text" placeholder="搜尋筆記…"><button class="btn">標籤篩選</button><button class="btn btn-primary">+ 新增筆記</button></div>
-        <div class="note-card"><div class="note-title">買入台積電 @848 的決策依據</div><div class="note-date">2025-03-18</div><div class="note-body">CoWoS 封裝需求持續強勁，AI 伺服器客戶訂單能見度高。本次買入 100 股作為加碼，目標價 $1,050，停損 $780。</div><div class="tags"><span class="tag">台積電</span><span class="tag">加碼</span><span class="tag">AI 供應鏈</span></div></div>
-        <div class="note-card"><div class="note-title">2025 年投資策略回顧</div><div class="note-date">2025-01-02</div><div class="note-body">今年聚焦 AI 基礎建設與台灣半導體。降低個股集中度，ETF 比重提升至 30%，整體倉位不超過可動用資金 80%。</div><div class="tags"><span class="tag">年度策略</span><span class="tag">ETF</span><span class="tag">風控</span></div></div>
+        <div class="search-row">
+          <input type="text" id="note-search" placeholder="搜尋筆記…" oninput="renderNotes()">
+          <button class="btn btn-primary" onclick="openNoteModal()">+ 新增筆記</button>
+        </div>
+        <div id="notes-list"></div>
+      </div>
+
+      <!-- ══ 黃金存摺 ══ -->
+      <div class="page" id="page-gold">
+        <div class="metrics-row" style="grid-template-columns:repeat(3,1fr)">
+          <div class="metric"><div class="metric-label">持有總克數</div><div class="metric-value" id="gold-total-grams">—</div><div class="metric-change neutral">公克</div></div>
+          <div class="metric"><div class="metric-label">市值（估）</div><div class="metric-value" id="gold-total-mv">—</div><div class="metric-change neutral">依現價計算</div></div>
+          <div class="metric"><div class="metric-label">未實現損益</div><div class="metric-value" id="gold-total-pnl">—</div><div class="metric-change neutral" id="gold-pnl-pct">—</div></div>
+        </div>
+        <div class="table-wrap" style="margin-bottom:14px">
+          <div class="table-head">
+            <div class="table-head-title">黃金存摺持倉</div>
+          </div>
+          <div id="gold-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">新增黃金存摺</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div>
+              <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">購買日期</label>
+              <input type="date" id="gold-date" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">克數（公克）</label>
+              <input type="number" id="gold-grams" placeholder="如：10.5" step="0.01" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">買入均價（元/克）</label>
+              <input type="number" id="gold-avg-price" placeholder="如：3200" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">現價（元/克，可手動更新）</label>
+              <input type="number" id="gold-current-price" placeholder="如：3500" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px">
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">備註（選填）</label>
+            <input type="text" id="gold-note" placeholder="如：台灣銀行黃金存摺" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px;margin-bottom:10px">
+          </div>
+          <button class="btn btn-primary" onclick="addGold()">新增</button>
+        </div>
       </div>
 
       <!-- ══ 稅務試算 ══ -->
@@ -600,14 +654,21 @@ tr:hover td{background:var(--bg3)}
       <div class="page" id="page-reports">
         <div class="grid-2">
           <div class="card">
-            <div class="card-title">季度績效走勢</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div class="card-title" style="margin-bottom:0">每季投入成本（實際資料）</div>
+              <select id="report-year-select" onchange="renderReportChart()" style="padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:11px">
+                <option value="2025">2025</option>
+                <option value="2026" selected>2026</option>
+                <option value="all">全部</option>
+              </select>
+            </div>
             <div style="position:relative;height:190px"><canvas id="reportChart"></canvas></div>
           </div>
           <div class="card">
             <div class="card-title">匯出設定</div>
             <div style="display:flex;flex-direction:column;gap:12px">
               <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">時間區間</label>
-              <select style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px"><option>2025 全年</option><option>2024 全年</option><option>近 6 個月</option><option>自訂</option></select></div>
+              <select style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px"><option>2026 全年</option><option>2025 全年</option><option>近 6 個月</option><option>自訂</option></select></div>
               <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">報表類型</label>
               <select style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px"><option>投資績效總覽</option><option>交易明細報表</option><option>損益彙總報表</option><option>稅務試算表</option></select></div>
               <div style="display:flex;gap:8px"><button class="btn btn-primary" style="flex:1;font-size:12px">匯出 PDF</button><button class="btn" style="flex:1;font-size:12px">匯出 Excel</button></div>
@@ -651,6 +712,35 @@ tr:hover td{background:var(--bg3)}
         <button class="btn btn-sm" onclick="testFinnhub()">測試連線</button>
         <span class="api-status"><span class="api-dot" id="finnhub-dot"></span><span id="finnhub-label">未設定</span></span>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Note Modal -->
+<div id="note-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:500" id="note-modal-title">新增筆記</div>
+      <button onclick="closeNoteModal()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;line-height:1">×</button>
+    </div>
+    <div style="display:grid;gap:10px">
+      <div>
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">標題</label>
+        <input type="text" id="note-title-input" placeholder="筆記標題" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">日期</label>
+        <input type="date" id="note-date-input" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">內容</label>
+        <textarea id="note-body-input" placeholder="記錄投資想法、交易理由、決策依據…" rows="6" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px;resize:vertical"></textarea>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">標籤（用逗號分隔）</label>
+        <input type="text" id="note-tags-input" placeholder="如：台積電, 加碼, AI" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
+      </div>
+      <button class="btn btn-primary" id="note-save-btn" onclick="saveNote()">儲存筆記</button>
     </div>
   </div>
 </div>
@@ -782,6 +872,17 @@ let fundSources = [
 let fundGroupIdCounter = 5;
 let fundEntryIdCounter = 10;
 
+// 黃金存摺
+let goldAssets = [];
+let goldIdCounter = 1;
+
+// 策略筆記
+let notes = [
+  {id:1, title:'買入台積電 @848 的決策依據', date:'2025-03-18', body:'CoWoS 封裝需求持續強勁，AI 伺服器客戶訂單能見度高。本次買入 100 股作為加碼，目標價 $1,050，停損 $780。', tags:['台積電','加碼','AI 供應鏈']},
+  {id:2, title:'2025 年投資策略回顧', date:'2025-01-02', body:'今年聚焦 AI 基礎建設與台灣半導體。降低個股集中度，ETF 比重提升至 30%，整體倉位不超過可動用資金 80%。', tags:['年度策略','ETF','風控']},
+];
+let noteIdCounter = 3;
+
 let finnhubKey = localStorage.getItem('finnhub_key')||'';
 let tradeFilter = {text:'',type:'all',ticker:'all'};
 let tradeIdCounter = 38;
@@ -895,26 +996,39 @@ function getRealizedPnLByCurrency(type) {
 function renderOverview() {
   const holdings = getHoldings();
   const realizedTotal = getRealizedPnL();
-  let totalMV = 0, totalCost = 0;
-  holdings.forEach(h => {
-    const cp = currentPrices[h.ticker] || 0;
-    totalMV += cp * h.shares;
-    totalCost += h.totalCost;
-  });
-  const unrealized = totalMV - totalCost;
-  const unrealizedPct = totalCost > 0 ? unrealized/totalCost*100 : 0;
 
-  document.getElementById('total-value').textContent = Math.round(totalMV).toLocaleString();
-  document.getElementById('total-value').className = 'font-size:26px;font-weight:600';
-  document.getElementById('total-cost').textContent = Math.round(totalCost).toLocaleString();
-  // Unrealized split by currency
-  let unrealizedTWD = 0, unrealizedUSD = 0;
+  // Split by currency
+  let totalMV_TWD=0, totalMV_USD=0, totalCost_TWD=0, totalCost_USD=0;
   holdings.forEach(h => {
     const cp = currentPrices[h.ticker] || 0;
-    const pnl = (cp - (h.shares>0?h.totalCost/h.shares:0)) * h.shares;
     const isUS = h.market==='us'||h.market==='us-dca';
-    if(isUS) unrealizedUSD += pnl; else unrealizedTWD += pnl;
+    if(isUS){ totalMV_USD+=cp*h.shares; totalCost_USD+=h.totalCost; }
+    else { totalMV_TWD+=cp*h.shares; totalCost_TWD+=h.totalCost; }
   });
+  // Add gold to TWD totals
+  const goldMV = goldAssets.reduce((s,g)=>{
+    const cp = currentPrices['GOLD_'+g.id]||g.avgPrice;
+    return s + cp*g.grams;
+  },0);
+  const goldCost = goldAssets.reduce((s,g)=>s+g.avgPrice*g.grams,0);
+  totalMV_TWD += goldMV;
+  totalCost_TWD += goldCost;
+
+  const totalMV = totalMV_TWD + totalCost_USD; // for bar (approximate)
+  const unrealized = (totalMV_TWD - totalCost_TWD) + (totalMV_USD - totalCost_USD);
+  const unrealizedPct = (totalCost_TWD+totalCost_USD) > 0 ? unrealized/(totalCost_TWD+totalCost_USD)*100 : 0;
+
+  // Total value: TWD + USD two lines
+  const tvEl = document.getElementById('total-value');
+  tvEl.innerHTML = `${Math.round(totalMV_TWD).toLocaleString()}<span style="font-size:13px;color:var(--text3);font-weight:400"> TWD</span>`
+    + (totalMV_USD>0?`<br><span style="font-size:18px">${totalMV_USD.toFixed(2)}</span><span style="font-size:13px;color:var(--text3);font-weight:400"> USD</span>`:'');
+
+  const tcEl = document.getElementById('total-cost');
+  tcEl.innerHTML = `${Math.round(totalCost_TWD).toLocaleString()}<span style="font-size:13px;color:var(--text2);font-weight:400"> TWD</span>`
+    + (totalCost_USD>0?`<br><span style="font-size:18px">${totalCost_USD.toFixed(2)}</span><span style="font-size:13px;color:var(--text2);font-weight:400"> USD</span>`:'');
+
+  // Unrealized split by currency
+  let unrealizedTWD=totalMV_TWD-totalCost_TWD, unrealizedUSD=totalMV_USD-totalCost_USD;
   const unrealizedEl = document.getElementById('unrealized-pnl');
   const twdHtml = `<span style="color:${unrealizedTWD>=0?'var(--up)':'var(--down)'}">${unrealizedTWD>=0?'+':''}${Math.round(unrealizedTWD).toLocaleString()}</span><span style="font-size:12px;color:var(--text3)"> TWD</span>`;
   const usdHtml = unrealizedUSD!==0 ? `<br><span style="color:${unrealizedUSD>=0?'var(--up)':'var(--down)'};">${unrealizedUSD>=0?'+':''}${unrealizedUSD.toFixed(2)}</span><span style="font-size:12px;color:var(--text3)"> USD</span>` : '';
@@ -927,32 +1041,31 @@ function renderOverview() {
   const realizedTWDHtml = `<span style="color:${realizedTWD>=0?'var(--up)':'var(--down)'}">${realizedTWD>=0?'+':''}${Math.round(realizedTWD).toLocaleString()}</span><span style="font-size:12px;color:var(--text3)"> TWD</span>`;
   const realizedUSDHtml = realizedUSD!==0 ? `<br><span style="color:${realizedUSD>=0?'var(--up)':'var(--down)'};">${realizedUSD>=0?'+':''}${Math.abs(realizedUSD).toFixed(2)}</span><span style="font-size:12px;color:var(--text3)"> USD</span>` : '';
   realizedTWDEl.innerHTML = realizedTWDHtml + realizedUSDHtml;
-  document.getElementById('stock-count-label').innerHTML = holdings.length+' 檔 ｜ <span id="last-update-time">'+( document.getElementById('last-update-time')?document.getElementById('last-update-time').textContent:'更新中…')+'</span>';
+  document.getElementById('stock-count-label').innerHTML = holdings.length+' 檔股票'+(goldAssets.length>0?` + ${goldAssets.length}筆黃金`:'')+' ｜ <span id="last-update-time">'+( document.getElementById('last-update-time')?document.getElementById('last-update-time').textContent:'更新中…')+'</span>';
 
-  // Market value vs cost bar
-  const barPct = totalCost > 0 ? Math.min(totalMV/totalCost*100, 150) : 0;
-  const normalizedBarW = totalCost > 0 ? Math.min((totalMV/totalCost)*66, 100) : 66;
+  // Market value vs cost bar (TWD only for simplicity)
+  const normalizedBarW = totalCost_TWD > 0 ? Math.min((totalMV_TWD/totalCost_TWD)*66, 100) : 66;
   document.getElementById('mv-bar').style.width = normalizedBarW+'%';
-  document.getElementById('mv-bar').style.background = unrealized>=0?'#185FA5':'#993C1D';
-  document.getElementById('mv-vs-cost-pct').textContent = totalCost>0?(totalMV/totalCost*100).toFixed(1)+'%':'—';
+  document.getElementById('mv-bar').style.background = unrealizedTWD>=0?'#185FA5':'#993C1D';
+  document.getElementById('mv-vs-cost-pct').textContent = totalCost_TWD>0?(totalMV_TWD/totalCost_TWD*100).toFixed(1)+'%':'—';
 
   // Allocation horizontal bar
   const allocBar = document.getElementById('alloc-bar');
   const allocLegend = document.getElementById('alloc-legend');
-  const totalMV2 = holdings.reduce((s,h)=>(s+(currentPrices[h.ticker]||0)*h.shares),0)||1;
-  allocBar.innerHTML='';
-  allocLegend.innerHTML='';
-  holdings.forEach((h,i)=>{
-    const mv=(currentPrices[h.ticker]||0)*h.shares;
-    const pct=mv/totalMV2*100;
-    const col=PALETTE[i%PALETTE.length];
+  const allMV = [...holdings.map(h=>({ticker:h.ticker,mv:(currentPrices[h.ticker]||0)*h.shares})),
+    ...goldAssets.map(g=>({ticker:'黃金存摺',mv:(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams}))];
+  const totalMV2 = allMV.reduce((s,x)=>s+x.mv,0)||1;
+  allocBar.innerHTML=''; allocLegend.innerHTML='';
+  allMV.forEach((x,i)=>{
+    const pct=x.mv/totalMV2*100;
+    const col=i===allMV.length-1&&goldAssets.length>0?'#EF9F27':PALETTE[i%PALETTE.length];
     const seg=document.createElement('div');
     seg.style.cssText=`width:${pct}%;background:${col};height:10px;`;
-    seg.title=`${h.ticker}: ${pct.toFixed(1)}%`;
+    seg.title=`${x.ticker}: ${pct.toFixed(1)}%`;
     allocBar.appendChild(seg);
     const leg=document.createElement('span');
     leg.style.cssText='display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)';
-    leg.innerHTML=`<span style="width:8px;height:8px;border-radius:2px;background:${col};display:inline-block;flex-shrink:0"></span>${h.ticker} <span style="color:var(--text3)">${pct.toFixed(1)}%</span>`;
+    leg.innerHTML=`<span style="width:8px;height:8px;border-radius:2px;background:${col};display:inline-block;flex-shrink:0"></span>${x.ticker} <span style="color:var(--text3)">${pct.toFixed(1)}%</span>`;
     allocLegend.appendChild(leg);
   });
 
@@ -1705,6 +1818,8 @@ function renderFunds(){
     groupEl.appendChild(addForm);
     container.appendChild(groupEl);
   });
+  // Re-render pie chart whenever funds update
+  setTimeout(renderFundPieChart, 50);
 }
 
 function addFundGroup(){
@@ -1821,7 +1936,195 @@ function calcFee(){
 }
 
 // ══════════════════════════════════════════
-//  LIVE PRICES – TWSE
+//  NOTES
+// ══════════════════════════════════════════
+let editingNoteId = null;
+
+function renderNotes() {
+  const q = (document.getElementById('note-search')?.value||'').toLowerCase();
+  const list = document.getElementById('notes-list');
+  list.innerHTML = '';
+  const filtered = notes.filter(n=>
+    !q || n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q) || n.tags.some(t=>t.toLowerCase().includes(q))
+  ).sort((a,b)=>b.date.localeCompare(a.date));
+  if(filtered.length===0){
+    list.innerHTML='<div style="text-align:center;color:var(--text3);padding:40px;font-size:13px">尚無筆記，點上方「+ 新增筆記」開始記錄</div>';
+    return;
+  }
+  filtered.forEach(n=>{
+    const card=document.createElement('div');
+    card.className='note-card';
+    card.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px">
+        <div class="note-title">${n.title}</div>
+        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:10px">
+          <button onclick="openNoteModal(${n.id})" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text3);padding:0" title="編輯">✏️</button>
+          <button onclick="deleteNote(${n.id})" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text3);padding:0" title="刪除">🗑</button>
+        </div>
+      </div>
+      <div class="note-date">${n.date}</div>
+      <div class="note-body">${n.body}</div>
+      <div class="tags">${n.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function openNoteModal(id=null) {
+  editingNoteId = id;
+  const modal = document.getElementById('note-modal');
+  if(id) {
+    const n = notes.find(x=>x.id===id);
+    if(!n) return;
+    document.getElementById('note-modal-title').textContent='編輯筆記';
+    document.getElementById('note-title-input').value=n.title;
+    document.getElementById('note-date-input').value=n.date;
+    document.getElementById('note-body-input').value=n.body;
+    document.getElementById('note-tags-input').value=n.tags.join(', ');
+    document.getElementById('note-save-btn').textContent='儲存修改';
+  } else {
+    document.getElementById('note-modal-title').textContent='新增筆記';
+    document.getElementById('note-title-input').value='';
+    document.getElementById('note-date-input').value=new Date().toISOString().split('T')[0];
+    document.getElementById('note-body-input').value='';
+    document.getElementById('note-tags-input').value='';
+    document.getElementById('note-save-btn').textContent='儲存筆記';
+  }
+  modal.style.display='flex';
+}
+
+function closeNoteModal() { document.getElementById('note-modal').style.display='none'; }
+
+function saveNote() {
+  const title=document.getElementById('note-title-input').value.trim();
+  const date=document.getElementById('note-date-input').value;
+  const body=document.getElementById('note-body-input').value.trim();
+  const tags=document.getElementById('note-tags-input').value.split(',').map(t=>t.trim()).filter(Boolean);
+  if(!title){alert('請填寫標題');return;}
+  if(editingNoteId) {
+    const idx=notes.findIndex(x=>x.id===editingNoteId);
+    if(idx!==-1) notes[idx]={...notes[idx],title,date,body,tags};
+  } else {
+    notes.push({id:noteIdCounter++,title,date,body,tags});
+  }
+  closeNoteModal();
+  renderNotes();
+  saveAllToCloud();
+}
+
+function deleteNote(id){
+  const n=notes.find(x=>x.id===id);
+  if(!n) return;
+  if(!confirm(`確定刪除「${n.title}」？`)) return;
+  notes=notes.filter(x=>x.id!==id);
+  renderNotes();
+  saveAllToCloud();
+}
+
+// ══════════════════════════════════════════
+//  GOLD ASSETS
+// ══════════════════════════════════════════
+function renderGold() {
+  const totalGrams=goldAssets.reduce((s,g)=>s+g.grams,0);
+  const totalCost=goldAssets.reduce((s,g)=>s+g.avgPrice*g.grams,0);
+  const totalMV=goldAssets.reduce((s,g)=>s+(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams,0);
+  const pnl=totalMV-totalCost;
+  const pct=totalCost>0?pnl/totalCost*100:0;
+
+  document.getElementById('gold-total-grams').textContent=totalGrams.toFixed(2)+' g';
+  document.getElementById('gold-total-mv').textContent=Math.round(totalMV).toLocaleString();
+  document.getElementById('gold-total-pnl').textContent=(pnl>=0?'+':'')+Math.round(pnl).toLocaleString();
+  document.getElementById('gold-total-pnl').className='metric-value '+(pnl>=0?'pos':'neg');
+  document.getElementById('gold-pnl-pct').textContent=(pct>=0?'+':'')+pct.toFixed(1)+'%';
+
+  const list=document.getElementById('gold-list');
+  list.innerHTML='';
+  if(goldAssets.length===0){
+    list.innerHTML='<div style="text-align:center;color:var(--text3);padding:20px;font-size:12px">尚未新增黃金存摺</div>';
+    return;
+  }
+  goldAssets.slice().sort((a,b)=>b.date.localeCompare(a.date)).forEach(g=>{
+    const cp=currentPrices['GOLD_'+g.id]||g.avgPrice;
+    const mv=cp*g.grams;
+    const pnl=mv-g.avgPrice*g.grams;
+    const pct=g.avgPrice>0?pnl/(g.avgPrice*g.grams)*100:0;
+    const cls=pnl>=0?'pos':'neg';
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap';
+    row.innerHTML=`
+      <span style="width:88px;flex-shrink:0;color:var(--text3)">${g.date}</span>
+      <span style="flex:1;font-weight:500">🥇 ${g.note||'黃金存摺'}</span>
+      <span style="color:var(--text2)">${g.grams.toFixed(2)} g</span>
+      <span style="color:var(--text2)">均價 ${g.avgPrice.toLocaleString()}</span>
+      <span>現價 <span class="editable-price" onclick="editGoldPrice(${g.id},this)">${cp.toLocaleString()}</span></span>
+      <span class="${cls}" style="font-weight:600">${(pnl>=0?'+':'')+Math.round(pnl).toLocaleString()}</span>
+      <span class="${cls}">${(pct>=0?'+':'')+pct.toFixed(1)}%</span>
+      <button onclick="deleteGold(${g.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">🗑</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function editGoldPrice(id, el){
+  const g=goldAssets.find(x=>x.id===id);
+  if(!g) return;
+  const cur=currentPrices['GOLD_'+id]||g.avgPrice;
+  const input=document.createElement('input');
+  input.type='number'; input.value=cur; input.className='price-input-inline';
+  input.onblur=()=>{
+    const v=parseFloat(input.value);
+    if(!isNaN(v)&&v>0) currentPrices['GOLD_'+id]=v;
+    renderGold(); renderOverview(); saveAllToCloud();
+  };
+  input.onkeydown=e=>{if(e.key==='Enter')input.blur();};
+  el.replaceWith(input); input.focus(); input.select();
+}
+
+function addGold(){
+  const date=document.getElementById('gold-date').value;
+  const grams=parseFloat(document.getElementById('gold-grams').value);
+  const avgPrice=parseFloat(document.getElementById('gold-avg-price').value);
+  const currentPrice=parseFloat(document.getElementById('gold-current-price').value)||avgPrice;
+  const note=document.getElementById('gold-note').value.trim();
+  if(!date||!grams||!avgPrice){alert('請填寫日期、克數、買入均價');return;}
+  const id=goldIdCounter++;
+  goldAssets.push({id,date,grams,avgPrice,note});
+  currentPrices['GOLD_'+id]=currentPrice;
+  document.getElementById('gold-grams').value='';
+  document.getElementById('gold-avg-price').value='';
+  document.getElementById('gold-current-price').value='';
+  document.getElementById('gold-note').value='';
+  renderGold(); renderOverview(); saveAllToCloud();
+}
+
+function deleteGold(id){
+  if(!confirm('確定刪除這筆黃金紀錄？')) return;
+  goldAssets=goldAssets.filter(g=>g.id!==id);
+  delete currentPrices['GOLD_'+id];
+  renderGold(); renderOverview(); saveAllToCloud();
+}
+
+// ══════════════════════════════════════════
+//  FUND PIE CHART
+// ══════════════════════════════════════════
+let fundPieChartInst = null;
+function renderFundPieChart(){
+  const labels=fundSources.map(g=>g.name);
+  const data=fundSources.map(g=>g.entries.reduce((s,e)=>s+e.amount,0));
+  const colors=fundSources.map(g=>g.color);
+  const total=data.reduce((a,b)=>a+b,0)||1;
+  document.getElementById('fund-pie-legend').innerHTML=labels.map((l,i)=>
+    `<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><span style="width:8px;height:8px;border-radius:2px;background:${colors[i]};display:inline-block"></span>${l} ${(data[i]/total*100).toFixed(1)}%</span>`
+  ).join('');
+  if(fundPieChartInst) fundPieChartInst.destroy();
+  const canvas=document.getElementById('fundPieChart');
+  if(!canvas) return;
+  fundPieChartInst=new Chart(canvas,{
+    type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'60%'}
+  });
+}
 // ══════════════════════════════════════════
 // Cloudflare Workers 中繼網址
 const PROXY = 'https://investment-proxy.j050311.workers.dev';
@@ -1934,14 +2237,57 @@ async function testFinnhub(){
 //  REPORT CHART
 // ══════════════════════════════════════════
 function renderReportChart(){
-  if(reportChartInst) return;
+  if(reportChartInst){ reportChartInst.destroy(); reportChartInst=null; }
+  const yearSel = document.getElementById('report-year-select');
+  const selectedYear = yearSel ? yearSel.value : 'all';
+
+  // Build quarterly cost data from real trades
+  const quarters = {};
+  trades.forEach(t=>{
+    if(t.type!=='buy') return;
+    const d=new Date(t.date);
+    const yr=d.getFullYear();
+    if(selectedYear!=='all' && yr!==parseInt(selectedYear)) return;
+    const q=Math.floor(d.getMonth()/3)+1;
+    const key=`${yr} Q${q}`;
+    if(!quarters[key]) quarters[key]=0;
+    quarters[key]+=t.price*t.shares+computeFee(t);
+  });
+  // Also add gold costs
+  goldAssets.forEach(g=>{
+    const d=new Date(g.date);
+    const yr=d.getFullYear();
+    if(selectedYear!=='all' && yr!==parseInt(selectedYear)) return;
+    const q=Math.floor(d.getMonth()/3)+1;
+    const key=`${yr} Q${q}`;
+    if(!quarters[key]) quarters[key]=0;
+    quarters[key]+=g.avgPrice*g.grams;
+  });
+
+  const labels=Object.keys(quarters).sort();
+  const data=labels.map(k=>Math.round(quarters[k]));
+
+  if(labels.length===0){
+    document.getElementById('reportChart').parentElement.innerHTML='<div style="text-align:center;color:var(--text3);padding:40px;font-size:12px">該期間無資料</div>';
+    return;
+  }
+
   reportChartInst=new Chart(document.getElementById('reportChart'),{
     type:'bar',
-    data:{labels:['Q1 2024','Q2 2024','Q3 2024','Q4 2024','Q1 2025'],
-      datasets:[{label:'報酬率%',data:[4.2,7.8,-1.3,8.5,3.2],backgroundColor:['#185FA5','#185FA5','#993C1D','#185FA5','#185FA5'],borderRadius:4,borderWidth:0}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#999',font:{size:11},autoSkip:false}},
-        y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#999',font:{size:11},callback:v=>v+'%'}}}}
+    data:{labels,datasets:[{
+      label:'投入成本',
+      data,
+      backgroundColor:'#185FA5',
+      borderRadius:4,borderWidth:0
+    }]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>`投入：${Math.round(v.raw).toLocaleString()}`}}},
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#999',font:{size:11},autoSkip:false}},
+        y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#999',font:{size:11},callback:v=>v>=10000?Math.round(v/10000)+'萬':v.toLocaleString()}}
+      }
+    }
   });
 }
 
@@ -1950,7 +2296,8 @@ function renderReportChart(){
 // ══════════════════════════════════════════
 const pageMeta={
   overview:{title:'投資組合總覽'},trades:{title:'帳務交易紀錄'},
-  funds:{title:'資金來源管理'},notes:{title:'投資策略筆記'},
+  funds:{title:'資金來源管理'},gold:{title:'黃金存摺'},
+  notes:{title:'投資策略筆記'},
   tax:{title:'稅務試算'},fees:{title:'手續費設定'},
   reports:{title:'報表匯出'},
 };
@@ -1962,6 +2309,9 @@ function showPage(id,el){
   document.getElementById('page-title').textContent=pageMeta[id].title;
   closeSidebar();
   if(id==='reports') renderReportChart();
+  if(id==='notes') renderNotes();
+  if(id==='gold') renderGold();
+  if(id==='funds') { renderFunds(); setTimeout(renderFundPieChart,100); }
 }
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
@@ -2076,6 +2426,8 @@ async function saveAllToCloud() {
       feeSettings: feeSettings,
       currentPrices: currentPrices,
       finnhubKey: finnhubKey,
+      goldAssets: goldAssets,
+      notes: notes,
       updatedAt: new Date().toISOString()
     });
     setCloudStatus('ok','已儲存 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}));
@@ -2114,6 +2466,8 @@ async function loadFromCloud() {
       }
       if(d.feeSettings) feeSettings = {...feeSettings, ...d.feeSettings};
       if(d.currentPrices) currentPrices = {...currentPrices, ...d.currentPrices};
+      if(d.goldAssets) { goldAssets=d.goldAssets; goldIdCounter=Math.max(...goldAssets.map(g=>g.id||0),0)+1; }
+      if(d.notes && d.notes.length>0) { notes=d.notes; noteIdCounter=Math.max(...notes.map(n=>n.id||0),0)+1; }
       if(d.finnhubKey) {
         finnhubKey = d.finnhubKey;
         localStorage.setItem('finnhub_key', finnhubKey);
@@ -2132,6 +2486,8 @@ async function loadFromCloud() {
   renderOverview();
   renderTradesTable();
   renderFunds();
+  renderGold();
+  renderNotes();
   renderTax();
   refreshAllPrices();
 }
