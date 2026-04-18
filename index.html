@@ -1258,6 +1258,7 @@ function renderOverview() {
     const sym = isUS ? '$' : '';
     const card = document.createElement('div');
     card.className = 'holding-card';
+    card.dataset.market = h.market; // for tab filtering
     const pnlAmt = (pnl>=0?'+':'-') + sym + Math.abs(Math.round(pnl)).toLocaleString();
     const pnlPctStr = (pct>=0?'+':'') + pct.toFixed(1) + '%';
     const priceStr = isGold ? cp.toLocaleString(undefined,{maximumFractionDigits:0}) : sym + cp.toLocaleString(undefined,{maximumFractionDigits:2});
@@ -1355,18 +1356,21 @@ function setAssetTab(tab, el) {
 }
 
 function applyAssetTab() {
-  const grid = document.getElementById('holdings-grid');
+  const cards = document.querySelectorAll('#holdings-grid .holding-card');
   const goldDiv = document.getElementById('gold-cards-overview');
-  if(currentAssetTab === 'all') {
-    grid.style.display = '';
-    goldDiv.style.display = '';
-  } else if(currentAssetTab === 'stocks') {
-    grid.style.display = '';
-    goldDiv.style.display = 'none';
-  } else if(currentAssetTab === 'gold') {
-    grid.style.display = 'none';
-    goldDiv.style.display = '';
-  }
+  cards.forEach(card => {
+    const mkt = card.dataset.market || '';
+    const isGold = mkt === 'gold';
+    if(currentAssetTab === 'all') {
+      card.style.display = '';
+    } else if(currentAssetTab === 'stocks') {
+      card.style.display = isGold ? 'none' : '';
+    } else if(currentAssetTab === 'gold') {
+      card.style.display = isGold ? '' : 'none';
+    }
+  });
+  // gold-cards-overview is empty (retired system), always hide
+  if(goldDiv) goldDiv.style.display = 'none';
 }
 
 function renderGoldOverviewCards() {
@@ -2887,7 +2891,7 @@ async function saveAllToCloud() {
       feeSettings: feeSettings,
       currentPrices: currentPrices,
       finnhubKey: finnhubKey,
-      goldAssets: goldAssets,
+      goldAssets: [],  // 已退役，統一用交易紀錄
       notes: notes,
       otherAssets: otherAssets,
       updatedAt: new Date().toISOString()
@@ -2928,7 +2932,12 @@ async function loadFromCloud() {
       }
       if(d.feeSettings) feeSettings = {...feeSettings, ...d.feeSettings};
       if(d.currentPrices) currentPrices = {...currentPrices, ...d.currentPrices};
-      if(d.goldAssets) { goldAssets=d.goldAssets; goldIdCounter=Math.max(...goldAssets.map(g=>g.id||0),0)+1; }
+      if(d.goldAssets && d.goldAssets.length>0) {
+        // goldAssets system is retired - clear from Firebase on next save
+        // goldAssets variable stays empty []
+        console.log('Migrating: clearing old goldAssets from Firebase');
+        goldAssets = [];
+      }
       if(d.notes && d.notes.length>0) { notes=d.notes; noteIdCounter=Math.max(...notes.map(n=>n.id||0),0)+1; }
       if(d.otherAssets) {
         otherAssets = {...otherAssets, ...d.otherAssets};
