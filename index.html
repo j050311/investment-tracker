@@ -215,6 +215,23 @@ tr:hover td{background:var(--bg3)}
   .mobile-trade-list{display:none!important}
 }
 
+/* Fund groups */
+.fund-group{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.fund-group-header{display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid var(--border)}
+.fund-group-total{font-size:13px;font-weight:600;margin-left:auto}
+.fund-entry{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:12px}
+.fund-entry:last-child{border-bottom:none}
+.fund-entry-date{width:88px;flex-shrink:0;color:var(--text3)}
+.fund-entry-note{flex:1;color:var(--text2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fund-entry-amount{font-weight:500;margin-right:4px;flex-shrink:0}
+.fund-add-entry{padding:10px 14px;background:var(--bg3);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fund-add-entry input{padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px}
+/* Trade row action buttons */
+.tr-actions{width:60px;flex-shrink:0;display:flex;gap:2px;justify-content:flex-end}
+.tr-act{background:none;border:none;cursor:pointer;font-size:11px;padding:3px 5px;border-radius:3px;color:var(--text3);font-family:inherit;line-height:1}
+.tr-act:hover{background:var(--bg3);color:var(--text2)}
+.tr-act.del:hover{color:var(--red)}
+
 .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99}
 
 @media(max-width:768px){
@@ -463,26 +480,22 @@ tr:hover td{background:var(--bg3)}
         <div class="metrics-row" style="grid-template-columns:repeat(3,1fr)">
           <div class="metric"><div class="metric-label">總投入資金</div><div class="metric-value" id="fund-total">—</div><div class="metric-change neutral" id="fund-count">—</div></div>
           <div class="metric"><div class="metric-label">最大來源</div><div class="metric-value" id="fund-largest" style="font-size:15px">—</div><div class="metric-change neutral" id="fund-largest-pct">—</div></div>
-          <div class="metric"><div class="metric-label">來源數</div><div class="metric-value" id="fund-source-count">—</div><div class="metric-change neutral">個帳戶/來源</div></div>
+          <div class="metric"><div class="metric-label">來源數</div><div class="metric-value" id="fund-source-count">—</div><div class="metric-change neutral">個大項目</div></div>
         </div>
+
+        <!-- 各大項目 -->
+        <div id="fund-groups"></div>
+
+        <!-- 新增大項目 -->
         <div class="card" style="margin-bottom:14px">
-          <div class="card-title">資金來源分布</div>
-          <div id="fund-list"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">新增資金來源</div>
-          <div style="display:grid;gap:10px">
-            <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">來源名稱</label>
-            <input type="text" id="fund-name-input" placeholder="如：玉山帳戶、年終獎金" style="width:100%;padding:7px 11px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px"></div>
-            <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">金額（NT$）</label>
-            <input type="number" id="fund-amt-input" placeholder="輸入金額" style="width:100%;padding:7px 11px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px"></div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <div style="position:relative">
-                <div id="swatch" onclick="document.getElementById('colorPicker').click()" style="width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border2);cursor:pointer;background:#378ADD"></div>
-                <input type="color" id="colorPicker" value="#378ADD" onchange="document.getElementById('swatch').style.background=this.value" style="opacity:0;width:0;height:0;position:absolute">
-              </div>
-              <button class="btn btn-primary" style="flex:1" onclick="addFundSource()">新增</button>
+          <div class="card-title">新增大項目</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="fund-group-name" placeholder="如：先生贊助、薪資存款" style="flex:1;min-width:140px;padding:7px 11px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
+            <div style="position:relative">
+              <div id="fund-group-swatch" onclick="document.getElementById('fund-group-color').click()" style="width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border2);cursor:pointer;background:#378ADD"></div>
+              <input type="color" id="fund-group-color" value="#378ADD" onchange="document.getElementById('fund-group-swatch').style.background=this.value" style="opacity:0;width:0;height:0;position:absolute">
             </div>
+            <button class="btn btn-primary" onclick="addFundGroup()">新增大項目</button>
           </div>
         </div>
       </div>
@@ -753,11 +766,21 @@ let currentPrices = {
 };
 
 let fundSources = [
-  {name:'玉山帳戶',amount:7960,color:'#378ADD'},
-  {name:'國泰帳戶',amount:5908,color:'#1D9E75'},
-  {name:'年終獎金',amount:8503,color:'#EF9F27'},
-  {name:'親友贊助',amount:17908,color:'#D4537E'},
+  {id:1, name:'玉山帳戶', color:'#378ADD', entries:[
+    {id:1, date:'2025-07-01', amount:7960, note:''}
+  ]},
+  {id:2, name:'國泰帳戶', color:'#1D9E75', entries:[
+    {id:1, date:'2025-07-01', amount:5908, note:''}
+  ]},
+  {id:3, name:'年終獎金', color:'#EF9F27', entries:[
+    {id:1, date:'2026-02-01', amount:8503, note:'2025年年終'}
+  ]},
+  {id:4, name:'親友贊助', color:'#D4537E', entries:[
+    {id:1, date:'2025-07-01', amount:17908, note:''}
+  ]},
 ];
+let fundGroupIdCounter = 5;
+let fundEntryIdCounter = 10;
 
 let finnhubKey = localStorage.getItem('finnhub_key')||'';
 let tradeFilter = {text:'',type:'all',ticker:'all'};
@@ -1437,6 +1460,7 @@ function renderGroupedTrades(filtered) {
           <span class="tr-date">日期</span><span class="tr-type">類型</span><span class="tr-mkt">市場</span>
           <span class="tr-shares">股數</span><span class="tr-price">成交價</span><span class="tr-cost">成本/股</span>
           <span class="tr-fee">手續費</span><span class="tr-pnl">損益</span><span class="tr-pct">報酬率</span>
+          <span class="tr-actions"></span>
         </div>
         <div class="trade-rows-inner-${tk}"></div>
         </div>
@@ -1470,6 +1494,10 @@ function renderGroupedTrades(filtered) {
         <span class="tr-fee">${sym}${fee.toFixed(isUS?2:0)}</span>
         <span class="tr-pnl ${rowCls}">${pnlTxt}</span>
         <span class="tr-pct ${rowCls}">${pctTxt}</span>
+        <span class="tr-actions">
+          <button class="tr-act" onclick="openEditTrade(${t.id})" title="編輯">✏️</button>
+          <button class="tr-act del" onclick="deleteTrade(${t.id})" title="刪除">🗑</button>
+        </span>
       `;
       rowsContainer.appendChild(row);
     });
@@ -1544,38 +1572,184 @@ function saveTrade(){
 }
 
 // ══════════════════════════════════════════
-//  FUND SOURCES
+//  TRADE EDIT / DELETE
 // ══════════════════════════════════════════
+function deleteTrade(id){
+  const t = trades.find(x=>x.id===id);
+  if(!t) return;
+  if(!confirm(`確定刪除這筆交易？\n${t.date} ${t.ticker} ${t.type==='buy'?'買入':'賣出'} ${t.shares}股 @${t.price}`)) return;
+  trades = trades.filter(x=>x.id!==id);
+  renderOverview(); renderTradesTable(); renderTax();
+  saveAllToCloud();
+}
+
+function openEditTrade(id){
+  const t = trades.find(x=>x.id===id);
+  if(!t) return;
+  // Reuse the add modal, pre-fill values
+  document.getElementById('t-date').value = t.date;
+  document.getElementById('t-market').value = t.market;
+  document.getElementById('t-type').value = t.type;
+  document.getElementById('t-ticker').value = t.ticker;
+  document.getElementById('t-name').value = t.name;
+  document.getElementById('t-shares').value = t.shares;
+  document.getElementById('t-price').value = t.price;
+  document.getElementById('t-fee').value = t.fee !== null ? t.fee : '';
+  // Switch save button to update mode
+  const saveBtn = document.querySelector('#add-trade-modal button.btn-primary');
+  saveBtn.textContent = '儲存修改';
+  saveBtn.onclick = () => updateTrade(id);
+  document.querySelector('#add-trade-modal div[style*="font-size:14px"]').textContent = '編輯交易';
+  document.getElementById('add-trade-modal').style.display='flex';
+}
+
+function updateTrade(id){
+  const idx = trades.findIndex(x=>x.id===id);
+  if(idx===-1) return;
+  const ticker=document.getElementById('t-ticker').value.trim().toUpperCase();
+  const shares=parseFloat(document.getElementById('t-shares').value);
+  const price=parseFloat(document.getElementById('t-price').value);
+  const feeRaw=document.getElementById('t-fee').value;
+  if(!ticker||!shares||!price){alert('請填寫代號、股數、成交價');return;}
+  trades[idx]={...trades[idx],
+    date:document.getElementById('t-date').value,
+    ticker, name:document.getElementById('t-name').value.trim()||ticker,
+    market:document.getElementById('t-market').value,
+    type:document.getElementById('t-type').value,
+    shares, price,
+    fee:feeRaw?parseFloat(feeRaw):null
+  };
+  // Reset modal back to add mode
+  const saveBtn = document.querySelector('#add-trade-modal button.btn-primary');
+  saveBtn.textContent = '新增交易';
+  saveBtn.onclick = saveTrade;
+  document.querySelector('#add-trade-modal div[style*="font-size:14px"]').textContent = '新增交易';
+  closeAddTrade();
+  renderOverview(); renderTradesTable(); renderTax();
+  saveAllToCloud();
+}
+
+// ══════════════════════════════════════════
+//  FUND SOURCES — 大項目 + 子項目
+// ══════════════════════════════════════════
+function getFundTotal(){
+  return fundSources.reduce((s,g)=>s+g.entries.reduce((es,e)=>es+e.amount,0),0);
+}
+
 function renderFunds(){
-  const total=fundSources.reduce((s,f)=>s+f.amount,0);
-  document.getElementById('fund-total').textContent=total.toLocaleString();
-  document.getElementById('fund-count').textContent=fundSources.length+'個來源';
-  document.getElementById('fund-source-count').textContent=fundSources.length;
-  const largest=fundSources.reduce((a,b)=>b.amount>a.amount?b:a,fundSources[0]||{name:'—',amount:0});
-  document.getElementById('fund-largest').textContent=largest.name;
-  document.getElementById('fund-largest-pct').textContent='佔 '+(total>0?(largest.amount/total*100).toFixed(1):'0')+'%';
-  const list=document.getElementById('fund-list');
-  list.innerHTML='';
-  fundSources.forEach((f,i)=>{
-    const pct=total>0?(f.amount/total*100).toFixed(1):'0';
-    const d=document.createElement('div');
-    d.className='fund-item';
-    d.innerHTML=`<div class="fund-item-row"><div class="fund-dot" style="background:${f.color}"></div><div class="fund-name">${f.name}</div><div class="fund-amount">NT$${f.amount.toLocaleString()} · ${pct}%</div><button onclick="removeFund(${i})" style="background:none;border:1px solid rgba(153,60,29,.3);border-radius:4px;color:var(--red);cursor:pointer;font-size:11px;padding:2px 7px;font-family:inherit">×</button></div><div class="fund-bar-track"><div class="fund-bar-fill" style="background:${f.color};width:${pct}%"></div></div>`;
-    list.appendChild(d);
+  const total = getFundTotal();
+  document.getElementById('fund-total').textContent = total.toLocaleString();
+  document.getElementById('fund-count').textContent = fundSources.length+'個大項目';
+  document.getElementById('fund-source-count').textContent = fundSources.length;
+
+  // Find largest group
+  const largest = fundSources.reduce((a,b)=>{
+    const at=a.entries.reduce((s,e)=>s+e.amount,0);
+    const bt=b.entries.reduce((s,e)=>s+e.amount,0);
+    return bt>at?b:a;
+  }, fundSources[0]||{name:'—',entries:[]});
+  const largestTotal = largest.entries ? largest.entries.reduce((s,e)=>s+e.amount,0) : 0;
+  document.getElementById('fund-largest').textContent = largest.name||'—';
+  document.getElementById('fund-largest-pct').textContent = '佔 '+(total>0?(largestTotal/total*100).toFixed(1):'0')+'%';
+
+  const container = document.getElementById('fund-groups');
+  container.innerHTML = '';
+
+  fundSources.forEach(g => {
+    const gTotal = g.entries.reduce((s,e)=>s+e.amount,0);
+    const pct = total>0?(gTotal/total*100).toFixed(1):'0';
+    const groupEl = document.createElement('div');
+    groupEl.className = 'fund-group';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'fund-group-header';
+    header.innerHTML=`
+      <div class="fund-dot" style="background:${g.color};width:12px;height:12px;border-radius:50%;flex-shrink:0"></div>
+      <div style="font-size:14px;font-weight:600;flex:1">${g.name}</div>
+      <div style="font-size:11px;color:var(--text3);margin-right:8px">${g.entries.length}筆 · ${pct}%</div>
+      <div class="fund-group-total">${gTotal.toLocaleString()}</div>
+      <button onclick="removeFundGroup(${g.id})" style="margin-left:10px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 4px" title="刪除大項目">×</button>
+    `;
+    // Progress bar
+    const bar = document.createElement('div');
+    bar.style.cssText=`height:3px;background:${g.color};opacity:.4;width:${pct}%`;
+
+    // Entries
+    const entriesEl = document.createElement('div');
+    g.entries.slice().sort((a,b)=>b.date.localeCompare(a.date)).forEach(e=>{
+      const row=document.createElement('div');
+      row.className='fund-entry';
+      row.innerHTML=`
+        <span class="fund-entry-date">${e.date}</span>
+        <span class="fund-entry-note">${e.note||'—'}</span>
+        <span class="fund-entry-amount">${e.amount.toLocaleString()}</span>
+        <button onclick="removeFundEntry(${g.id},${e.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:0 4px" title="刪除">×</button>
+      `;
+      entriesEl.appendChild(row);
+    });
+
+    // Add entry form
+    const addForm = document.createElement('div');
+    addForm.className = 'fund-add-entry';
+    addForm.innerHTML=`
+      <input type="date" id="fund-entry-date-${g.id}" value="${new Date().toISOString().split('T')[0]}" style="width:130px">
+      <input type="number" id="fund-entry-amt-${g.id}" placeholder="金額" style="width:100px">
+      <input type="text" id="fund-entry-note-${g.id}" placeholder="備註（選填）" style="flex:1;min-width:80px">
+      <button class="btn btn-sm btn-primary" onclick="addFundEntry(${g.id})">新增一筆</button>
+    `;
+
+    groupEl.appendChild(header);
+    groupEl.appendChild(bar);
+    groupEl.appendChild(entriesEl);
+    groupEl.appendChild(addForm);
+    container.appendChild(groupEl);
   });
 }
-function addFundSource(){
-  const name=document.getElementById('fund-name-input').value.trim();
-  const amount=parseFloat(document.getElementById('fund-amt-input').value);
-  const color=document.getElementById('colorPicker').value;
-  if(!name||!amount){alert('請填寫名稱與金額');return;}
-  fundSources.push({name,amount,color});
-  document.getElementById('fund-name-input').value='';
-  document.getElementById('fund-amt-input').value='';
+
+function addFundGroup(){
+  const name = document.getElementById('fund-group-name').value.trim();
+  const color = document.getElementById('fund-group-color').value;
+  if(!name){alert('請填寫大項目名稱');return;}
+  fundSources.push({id:fundGroupIdCounter++, name, color, entries:[]});
+  document.getElementById('fund-group-name').value='';
   renderFunds();
-  saveAllToCloud(); // 自動存到雲端
+  saveAllToCloud();
 }
-function removeFund(i){if(confirm(`確定刪除「${fundSources[i].name}」？`)){fundSources.splice(i,1);renderFunds();saveAllToCloud();}}
+
+function removeFundGroup(gid){
+  const g = fundSources.find(x=>x.id===gid);
+  if(!g) return;
+  if(!confirm(`確定刪除「${g.name}」及其所有紀錄？`)) return;
+  fundSources = fundSources.filter(x=>x.id!==gid);
+  renderFunds();
+  saveAllToCloud();
+}
+
+function addFundEntry(gid){
+  const g = fundSources.find(x=>x.id===gid);
+  if(!g) return;
+  const date = document.getElementById(`fund-entry-date-${gid}`).value;
+  const amount = parseFloat(document.getElementById(`fund-entry-amt-${gid}`).value);
+  const note = document.getElementById(`fund-entry-note-${gid}`).value.trim();
+  if(!date||!amount){alert('請填寫日期和金額');return;}
+  g.entries.push({id:fundEntryIdCounter++, date, amount, note});
+  renderFunds();
+  saveAllToCloud();
+}
+
+function removeFundEntry(gid, eid){
+  const g = fundSources.find(x=>x.id===gid);
+  if(!g) return;
+  if(!confirm('確定刪除這筆紀錄？')) return;
+  g.entries = g.entries.filter(e=>e.id!==eid);
+  renderFunds();
+  saveAllToCloud();
+}
+
+// keep old addFundSource as alias so existing cloud data still works
+function addFundSource(){}
+function removeFund(){}
 
 // ══════════════════════════════════════════
 //  TAX
@@ -1923,7 +2097,21 @@ async function loadFromCloud() {
         trades = d.trades;
         tradeIdCounter = Math.max(...trades.map(t=>t.id||0)) + 1;
       }
-      if(d.fundSources) fundSources = d.fundSources;
+      if(d.fundSources && d.fundSources.length>0) {
+        // Migrate old flat format {name, amount, color} to new grouped format
+        if(d.fundSources[0] && !d.fundSources[0].entries) {
+          fundSources = d.fundSources.map((f,i)=>({
+            id: i+1,
+            name: f.name,
+            color: f.color||'#378ADD',
+            entries: [{id:1, date:'2025-01-01', amount:f.amount, note:''}]
+          }));
+          fundGroupIdCounter = fundSources.length+1;
+        } else {
+          fundSources = d.fundSources;
+          fundGroupIdCounter = Math.max(...fundSources.map(g=>g.id||0))+1;
+        }
+      }
       if(d.feeSettings) feeSettings = {...feeSettings, ...d.feeSettings};
       if(d.currentPrices) currentPrices = {...currentPrices, ...d.currentPrices};
       if(d.finnhubKey) {
