@@ -283,6 +283,10 @@ tr:hover td{background:var(--bg3)}
         <div class="logo-sub">Portfolio Manager</div>
       </div>
       <div class="nav-section">主要功能</div>
+      <div class="nav-item" onclick="showPage('assets',this)">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".3"/></svg>
+        資產總覽
+      </div>
       <div class="nav-item active" onclick="showPage('overview',this)">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".8"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".8"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".5"/></svg>
         投資組合
@@ -379,7 +383,7 @@ tr:hover td{background:var(--bg3)}
               <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">資產配置</div>
               <div style="font-size:11px;color:var(--text3)" id="stock-count-label">— ｜ <span id="last-update-time">更新中…</span></div>
             </div>
-            <div id="alloc-bar" style="display:flex;height:10px;border-radius:5px;overflow:hidden;margin-bottom:10px"></div>
+            <div id="alloc-bar" style="display:flex;height:28px;border-radius:6px;overflow:hidden;margin-bottom:10px"></div>
             <div id="alloc-legend" style="display:flex;flex-wrap:wrap;gap:8px 14px"></div>
           </div>
           <div class="card" style="padding:14px 16px">
@@ -422,6 +426,98 @@ tr:hover td{background:var(--bg3)}
           <div id="ai-output" style="font-size:13px;color:var(--text2);line-height:1.7;min-height:40px">
             <span style="color:var(--text3)">點擊「分析持倉」，AI 將根據你目前的持倉、損益與配比，給出觀察與建議。</span>
           </div>
+        </div>
+      </div>
+
+      <!-- ══ 資產總覽 ══ -->
+      <div class="page" id="page-assets">
+        <!-- 淨資產大標 -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.05em">淨資產（估算）</div>
+          <div style="font-size:32px;font-weight:700;letter-spacing:-.5px" id="assets-net-worth">—</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:6px">所有已記錄資產合計（TWD）</div>
+        </div>
+
+        <!-- 資產類別橫條圖 -->
+        <div class="card" style="margin-bottom:14px;padding:14px 16px">
+          <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">資產分布</div>
+          <div id="assets-bar" style="display:flex;height:28px;border-radius:6px;overflow:hidden;margin-bottom:10px"></div>
+          <div id="assets-bar-legend" style="display:flex;flex-wrap:wrap;gap:8px 16px"></div>
+        </div>
+
+        <!-- 各類資產區塊 -->
+        <!-- 1. 投資組合（從現有資料自動帶入） -->
+        <div class="card" style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:10px;height:10px;border-radius:2px;background:#185FA5"></div>
+              <div style="font-size:13px;font-weight:600">投資組合</div>
+              <span class="badge badge-tw" style="font-size:10px">自動計算</span>
+            </div>
+            <div style="font-size:16px;font-weight:700" id="assets-portfolio-total">—</div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px">股票 + 黃金存摺（依現有交易紀錄）</div>
+          <div id="assets-portfolio-breakdown" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+        </div>
+
+        <!-- 2. 現金 -->
+        <div class="card" style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:10px;height:10px;border-radius:2px;background:#27AE60"></div>
+              <div style="font-size:13px;font-weight:600">現金 ＆ 存款</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:16px;font-weight:700" id="assets-cash-total">—</div>
+              <button class="btn btn-sm" onclick="openAssetModal('cash')">+ 新增</button>
+            </div>
+          </div>
+          <div id="assets-cash-list"></div>
+        </div>
+
+        <!-- 3. 房地產 -->
+        <div class="card" style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:10px;height:10px;border-radius:2px;background:#8E44AD"></div>
+              <div style="font-size:13px;font-weight:600">房地產</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:16px;font-weight:700" id="assets-property-total">—</div>
+              <button class="btn btn-sm" onclick="openAssetModal('property')">+ 新增</button>
+            </div>
+          </div>
+          <div id="assets-property-list"></div>
+        </div>
+
+        <!-- 4. 飾金 -->
+        <div class="card" style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:10px;height:10px;border-radius:2px;background:#EF9F27"></div>
+              <div style="font-size:13px;font-weight:600">飾金</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:16px;font-weight:700" id="assets-jewelry-total">—</div>
+              <button class="btn btn-sm" onclick="openAssetModal('jewelry')">+ 新增</button>
+            </div>
+          </div>
+          <div id="assets-jewelry-list"></div>
+        </div>
+
+        <!-- 5. 其他資產 -->
+        <div class="card" style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:10px;height:10px;border-radius:2px;background:#95A5A6"></div>
+              <div style="font-size:13px;font-weight:600">其他資產</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:16px;font-weight:700" id="assets-other-total">—</div>
+              <button class="btn btn-sm" onclick="openAssetModal('other')">+ 新增</button>
+            </div>
+          </div>
+          <div id="assets-other-list"></div>
         </div>
       </div>
 
@@ -803,6 +899,47 @@ tr:hover td{background:var(--bg3)}
   </div>
 </div>
 
+<!-- Asset Modal -->
+<div id="asset-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:20px;width:100%;max-width:400px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:500" id="asset-modal-title">新增資產</div>
+      <button onclick="closeAssetModal()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;line-height:1">×</button>
+    </div>
+    <div style="display:grid;gap:10px">
+      <div>
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">名稱 / 說明</label>
+        <input type="text" id="asset-name" placeholder="如：台北自住房、美元定存" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">金額</label>
+          <input type="number" id="asset-value" placeholder="0" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">幣別</label>
+          <select id="asset-currency" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
+            <option value="TWD">TWD（台幣）</option>
+            <option value="USD">USD（美元）</option>
+            <option value="JPY">JPY（日幣）</option>
+            <option value="EUR">EUR（歐元）</option>
+            <option value="HKD">HKD（港幣）</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">日期</label>
+        <input type="date" id="asset-date" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">備註（選填）</label>
+        <input type="text" id="asset-note" placeholder="地址、帳戶說明等" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
+      </div>
+      <button class="btn btn-primary" onclick="saveAsset()">新增</button>
+    </div>
+  </div>
+</div>
+
 <!-- Firebase SDK（Firebase 的工具箱，讓我們能使用它的功能） -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -1092,7 +1229,7 @@ function renderOverview() {
     const pct=x.mv/totalMV2*100;
     const col=i===allMV.length-1&&goldAssets.length>0?'#EF9F27':PALETTE[i%PALETTE.length];
     const seg=document.createElement('div');
-    seg.style.cssText=`width:${pct}%;background:${col};height:10px;`;
+    seg.style.cssText=`width:${pct}%;background:${col};height:28px;`;
     seg.title=`${x.ticker}: ${pct.toFixed(1)}%`;
     allocBar.appendChild(seg);
     const leg=document.createElement('span');
@@ -1514,7 +1651,19 @@ function renderUnrealizedTable(){
   });
 
   holdings.forEach(h=>{
-    const cp=currentPrices[h.ticker]||0;
+    const isGold = h.market==='gold';
+    // Gold uses per-entry currentPrices keyed by GOLD_id — use average
+    let cp;
+    if(isGold){
+      const goldEntries = goldAssets.filter(g=>g.ticker===h.ticker||h.ticker==='GOLD');
+      if(goldEntries.length>0){
+        const totalMV = goldEntries.reduce((s,g)=>(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams+s,0);
+        const totalG = goldEntries.reduce((s,g)=>s+g.grams,0);
+        cp = totalG>0 ? totalMV/totalG : 0;
+      } else cp = currentPrices[h.ticker]||0;
+    } else {
+      cp = currentPrices[h.ticker]||0;
+    }
     const avg=h.shares>0?h.totalCost/h.shares:0;
     const mv=cp*h.shares;
     const pnl=mv-h.totalCost;
@@ -1523,14 +1672,15 @@ function renderUnrealizedTable(){
     if(isUS) totalUSD+=pnl; else totalTWD+=pnl;
     const sym=isUS?'$':'';
     const cls=pnl>=0?'pos':'neg';
-    const mktLabel={tw:'台股',us:'美股','tw-dca':'台股定額','us-dca':'美股定額'}[h.market]||h.market;
+    const mktLabel={tw:'台股',us:'美股','tw-dca':'台股定額','us-dca':'美股定額',gold:'貴金屬'}[h.market]||h.market;
+    const unit=isGold?'克':'股';
     const tr=document.createElement('tr');
     tr.innerHTML=`
       <td style="color:var(--text3)">${firstBuy[h.ticker]||'—'}</td>
       <td style="font-weight:500">${h.ticker}</td>
       <td>${h.name}</td>
-      <td><span class="badge ${isUS?'badge-us':'badge-tw'}">${mktLabel}</span></td>
-      <td>${h.shares.toLocaleString()}</td>
+      <td><span class="badge ${isUS?'badge-us':isGold?'':'badge-tw'}" style="${isGold?'background:#FFF3CD;color:#856404':''}">${mktLabel}</span></td>
+      <td>${h.shares.toLocaleString()} ${unit}</td>
       <td style="color:var(--text2)">${sym}${avg.toFixed(2)}</td>
       <td>${sym}${cp.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
       <td style="color:var(--text2)">${sym}${Math.round(h.totalCost).toLocaleString()}</td>
@@ -1541,9 +1691,9 @@ function renderUnrealizedTable(){
     tbody.appendChild(tr);
   });
 
-  // Build multi-currency total display
   const parts=[];
-  if(totalTWD!==0||holdings.some(h=>h.market==='tw'||h.market==='tw-dca')){
+  const hasTWD = holdings.some(h=>h.market==='tw'||h.market==='tw-dca'||h.market==='gold');
+  if(totalTWD!==0||hasTWD){
     const cls=totalTWD>=0?'pos':'neg';
     parts.push(`<span class="${cls}" style="font-size:13px;font-weight:600">${totalTWD>=0?'+':''}${Math.round(totalTWD).toLocaleString()}</span><span style="font-size:10px;color:var(--text3);margin-left:2px">TWD</span>`);
   }
@@ -1575,11 +1725,11 @@ function renderRealizedTable(){
     }
   });
 
-  const totalTWD=realizedRows.filter(r=>r.market==='tw'||r.market==='tw-dca').reduce((s,r)=>s+r.pnl,0);
+  const totalTWD=realizedRows.filter(r=>r.market==='tw'||r.market==='tw-dca'||r.market==='gold').reduce((s,r)=>s+r.pnl,0);
   const totalUSD=realizedRows.filter(r=>r.market==='us'||r.market==='us-dca').reduce((s,r)=>s+r.pnl,0);
   const panelTotal=document.getElementById('realized-panel-total');
   const parts=[];
-  if(realizedRows.some(r=>r.market==='tw'||r.market==='tw-dca')){
+  if(realizedRows.some(r=>r.market==='tw'||r.market==='tw-dca'||r.market==='gold')){
     const cls=totalTWD>=0?'pos':'neg';
     parts.push(`<span class="${cls}" style="font-size:13px;font-weight:600">${totalTWD>=0?'+':''}${Math.round(totalTWD).toLocaleString()}</span><span style="font-size:10px;color:var(--text3);margin-left:2px">TWD</span>`);
   }
@@ -1598,16 +1748,18 @@ function renderRealizedTable(){
   }
   realizedRows.sort((a,b)=>b.date.localeCompare(a.date)).forEach(r=>{
     const isUS=r.market==='us'||r.market==='us-dca';
+    const isGold=r.market==='gold';
     const sym=isUS?'$':'';
     const cls=r.pnl>=0?'pos':'neg';
-    const mktLabel={tw:'台股',us:'美股','tw-dca':'台股定額','us-dca':'美股定額'}[r.market]||r.market;
+    const mktLabel={tw:'台股',us:'美股','tw-dca':'台股定額','us-dca':'美股定額',gold:'貴金屬'}[r.market]||r.market;
+    const unit=isGold?'克':'股';
     const tr=document.createElement('tr');
     tr.innerHTML=`
       <td>${r.date}</td>
       <td style="font-weight:500">${r.ticker}</td>
       <td>${r.name}</td>
-      <td><span class="badge ${isUS?'badge-us':'badge-tw'}">${mktLabel}</span></td>
-      <td>${r.shares.toLocaleString()}</td>
+      <td><span class="badge ${isUS?'badge-us':isGold?'':'badge-tw'}" style="${isGold?'background:#FFF3CD;color:#856404':''}">${mktLabel}</span></td>
+      <td>${r.shares.toLocaleString()} ${unit}</td>
       <td style="color:var(--text2)">${sym}${r.costBasis.toFixed(2)}</td>
       <td>${sym}${r.price.toLocaleString(undefined,{maximumFractionDigits:2})}</td>
       <td style="color:var(--text2)">${sym}${r.fee.toFixed(isUS?2:0)}</td>
@@ -1698,7 +1850,7 @@ function renderGroupedTrades(filtered) {
     const avgCostPerShare = holding&&holding.shares>0?holding.totalCost/holding.shares:0;
     const buyCount = g.trades.filter(t=>t.type==='buy').length;
     const sellCount2 = g.trades.filter(t=>t.type==='sell').length;
-    const mktLabel = {tw:'台股',us:'美股','tw-dca':'台股定額','us-dca':'美股定額'}[g.market]||g.market;
+    const mktLabel = {tw:'台股',us:'美股','tw-dca':'台股定額','us-dca':'美股定額',gold:'貴金屬'}[g.market]||g.market;
 
     let pnlHtml='';
     if(sharesHeld>0 && cp>0) {
@@ -2319,6 +2471,145 @@ function renderFundPieChart(){
   });
 }
 // ══════════════════════════════════════════
+// ══════════════════════════════════════════
+//  ASSET OVERVIEW
+// ══════════════════════════════════════════
+let otherAssets = { cash:[], property:[], jewelry:[], other:[] };
+let assetIdCounter = 1;
+const FX_RATES = { TWD:1, USD:32, JPY:0.21, EUR:35, HKD:4.1 };
+const ASSET_CONFIG = {
+  cash:     { label:'現金 ＆ 存款', color:'#27AE60' },
+  property: { label:'房地產',       color:'#8E44AD' },
+  jewelry:  { label:'飾金',         color:'#EF9F27' },
+  other:    { label:'其他資產',      color:'#95A5A6' }
+};
+function assetToTWD(v,c){ return v*(FX_RATES[c]||1); }
+
+function renderAssets(){
+  const holdings=getHoldings();
+  let pTWD=0,pUSD=0;
+  holdings.forEach(h=>{
+    const isGold=h.market==='gold';
+    let cp=0;
+    if(isGold){
+      const totalMV=goldAssets.reduce((s,g)=>s+(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams,0);
+      const totalG=goldAssets.reduce((s,g)=>s+g.grams,0);
+      cp=totalG>0?totalMV/totalG:0;
+    } else cp=currentPrices[h.ticker]||0;
+    const isUS=h.market==='us'||h.market==='us-dca';
+    if(isUS) pUSD+=cp*h.shares; else pTWD+=cp*h.shares;
+  });
+  const pTotal=pTWD+pUSD*FX_RATES.USD;
+
+  const totals={};
+  let grand=pTotal;
+  Object.keys(ASSET_CONFIG).forEach(k=>{
+    const t=(otherAssets[k]||[]).reduce((s,a)=>s+assetToTWD(a.value,a.currency),0);
+    totals[k]=t; grand+=t;
+  });
+
+  const nwEl=document.getElementById('assets-net-worth');
+  if(nwEl) nwEl.textContent=Math.round(grand).toLocaleString()+' TWD';
+
+  // Bar
+  const barEl=document.getElementById('assets-bar');
+  const legEl=document.getElementById('assets-bar-legend');
+  if(barEl&&legEl){
+    barEl.innerHTML=''; legEl.innerHTML='';
+    const segs=[
+      {label:'投資組合',color:'#185FA5',value:pTotal},
+      ...Object.keys(ASSET_CONFIG).map(k=>({label:ASSET_CONFIG[k].label,color:ASSET_CONFIG[k].color,value:totals[k]}))
+    ].filter(s=>s.value>0);
+    const tot=segs.reduce((s,x)=>s+x.value,0)||1;
+    segs.forEach(s=>{
+      const pct=s.value/tot*100;
+      const seg=document.createElement('div');
+      seg.style.cssText=`width:${pct}%;background:${s.color};height:28px;`;
+      seg.title=`${s.label}: ${pct.toFixed(1)}%`;
+      barEl.appendChild(seg);
+      const leg=document.createElement('span');
+      leg.style.cssText='display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)';
+      leg.innerHTML=`<span style="width:8px;height:8px;border-radius:2px;background:${s.color};display:inline-block;flex-shrink:0"></span>${s.label} <span style="color:var(--text3)">${pct.toFixed(1)}%</span>`;
+      legEl.appendChild(leg);
+    });
+  }
+
+  // Portfolio card
+  const pbEl=document.getElementById('assets-portfolio-total');
+  if(pbEl) pbEl.textContent=Math.round(pTotal).toLocaleString();
+  const pbBreak=document.getElementById('assets-portfolio-breakdown');
+  if(pbBreak){
+    pbBreak.innerHTML='';
+    [
+      {label:'台股',value:holdings.filter(h=>h.market==='tw'||h.market==='tw-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0)},
+      {label:'美股',value:pUSD*FX_RATES.USD},
+      {label:'黃金存摺',value:goldAssets.reduce((s,g)=>s+(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams,0)}
+    ].filter(c=>c.value>0).forEach(c=>{
+      const chip=document.createElement('div');
+      chip.style.cssText='padding:6px 12px;background:var(--bg3);border-radius:20px;font-size:12px;color:var(--text2)';
+      chip.textContent=`${c.label}  ${Math.round(c.value).toLocaleString()}`;
+      pbBreak.appendChild(chip);
+    });
+  }
+
+  // Other asset types
+  Object.keys(ASSET_CONFIG).forEach(type=>{
+    const cfg=ASSET_CONFIG[type];
+    const tEl=document.getElementById(`assets-${type}-total`);
+    const lEl=document.getElementById(`assets-${type}-list`);
+    if(tEl) tEl.textContent=totals[type]>0?Math.round(totals[type]).toLocaleString():'—';
+    if(!lEl) return;
+    lEl.innerHTML='';
+    const items=otherAssets[type]||[];
+    if(items.length===0){
+      lEl.innerHTML=`<div style="font-size:12px;color:var(--text3);padding:8px 0">尚未新增，點「+ 新增」開始記錄</div>`;
+      return;
+    }
+    items.forEach(a=>{
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap';
+      row.innerHTML=`
+        <span style="flex:1;font-weight:500">${a.name}</span>
+        <span style="color:var(--text3);font-size:11px">${a.date||''}</span>
+        <span style="font-weight:600">${a.value.toLocaleString()} ${a.currency}</span>
+        ${a.currency!=='TWD'?`<span style="font-size:11px;color:var(--text3)">≈${Math.round(assetToTWD(a.value,a.currency)).toLocaleString()} TWD</span>`:''}
+        ${a.note?`<span style="color:var(--text3);font-size:11px">${a.note}</span>`:''}
+        <button onclick="deleteAsset('${type}',${a.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0 4px">×</button>
+      `;
+      lEl.appendChild(row);
+    });
+  });
+}
+
+let _assetCurrentType='cash';
+function openAssetModal(type){
+  _assetCurrentType=type;
+  document.getElementById('asset-modal-title').textContent='新增'+ASSET_CONFIG[type].label;
+  document.getElementById('asset-name').value='';
+  document.getElementById('asset-value').value='';
+  document.getElementById('asset-currency').value='TWD';
+  document.getElementById('asset-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('asset-note').value='';
+  document.getElementById('asset-modal').style.display='flex';
+}
+function closeAssetModal(){ document.getElementById('asset-modal').style.display='none'; }
+function saveAsset(){
+  const name=document.getElementById('asset-name').value.trim();
+  const value=parseFloat(document.getElementById('asset-value').value);
+  const currency=document.getElementById('asset-currency').value;
+  const date=document.getElementById('asset-date').value;
+  const note=document.getElementById('asset-note').value.trim();
+  if(!name||!value){alert('請填寫名稱和金額');return;}
+  if(!otherAssets[_assetCurrentType]) otherAssets[_assetCurrentType]=[];
+  otherAssets[_assetCurrentType].push({id:assetIdCounter++,name,value,currency,date,note});
+  closeAssetModal(); renderAssets(); saveAllToCloud();
+}
+function deleteAsset(type,id){
+  if(!confirm('確定刪除這筆？')) return;
+  otherAssets[type]=(otherAssets[type]||[]).filter(a=>a.id!==id);
+  renderAssets(); saveAllToCloud();
+}
+
 // Cloudflare Workers 中繼網址
 const PROXY = 'https://investment-proxy.j050311.workers.dev';
 
@@ -2501,6 +2792,7 @@ function renderReportChart(){
 //  NAV
 // ══════════════════════════════════════════
 const pageMeta={
+  assets:{title:'資產總覽'},
   overview:{title:'投資組合總覽'},trades:{title:'帳務交易紀錄'},
   funds:{title:'資金來源管理'},gold:{title:'黃金存摺'},
   notes:{title:'投資策略筆記'},
@@ -2510,7 +2802,6 @@ const pageMeta={
 function showPage(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  // Gold page now opens overview with gold tab active
   if(id==='gold'){
     document.getElementById('page-overview').classList.add('active');
     document.querySelector('.nav-item[onclick*="overview"]')?.classList.add('active');
@@ -2524,6 +2815,7 @@ function showPage(id,el){
   closeSidebar();
   if(id==='reports') renderReportChart();
   if(id==='notes') renderNotes();
+  if(id==='assets') renderAssets();
   if(id==='funds') { renderFunds(); setTimeout(renderFundPieChart,100); }
 }
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
@@ -2641,6 +2933,7 @@ async function saveAllToCloud() {
       finnhubKey: finnhubKey,
       goldAssets: goldAssets,
       notes: notes,
+      otherAssets: otherAssets,
       updatedAt: new Date().toISOString()
     });
     setCloudStatus('ok','已儲存 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}));
@@ -2681,6 +2974,12 @@ async function loadFromCloud() {
       if(d.currentPrices) currentPrices = {...currentPrices, ...d.currentPrices};
       if(d.goldAssets) { goldAssets=d.goldAssets; goldIdCounter=Math.max(...goldAssets.map(g=>g.id||0),0)+1; }
       if(d.notes && d.notes.length>0) { notes=d.notes; noteIdCounter=Math.max(...notes.map(n=>n.id||0),0)+1; }
+      if(d.otherAssets) {
+        otherAssets = {...otherAssets, ...d.otherAssets};
+        // Rebuild assetIdCounter from all entries
+        const allIds = Object.values(otherAssets).flat().map(a=>a.id||0);
+        if(allIds.length>0) assetIdCounter = Math.max(...allIds)+1;
+      }
       if(d.finnhubKey) {
         finnhubKey = d.finnhubKey;
         localStorage.setItem('finnhub_key', finnhubKey);
@@ -2701,6 +3000,7 @@ async function loadFromCloud() {
   renderFunds();
   renderGold();
   renderNotes();
+  renderAssets();
   renderTax();
   refreshAllPrices();
 }
