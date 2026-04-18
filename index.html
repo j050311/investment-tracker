@@ -215,7 +215,25 @@ tr:hover td{background:var(--bg3)}
   .mobile-trade-list{display:none!important}
 }
 
-/* Fund groups */
+/* Asset filter tabs & pie mode tabs */
+.asset-tab{padding:6px 16px;border-radius:20px;font-size:13px;cursor:pointer;border:none;background:transparent;color:var(--text2);font-family:inherit;font-weight:500;transition:all .15s}
+.asset-tab.active{background:var(--blue);color:#fff}
+.asset-tab:hover:not(.active){background:var(--bg3);color:var(--text)}
+.pie-tab{padding:4px 10px;font-size:11px;cursor:pointer;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);font-family:inherit;transition:all .12s}
+.pie-tab:first-child{border-radius:var(--radius-sm) 0 0 var(--radius-sm)}
+.pie-tab:last-child{border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.pie-tab:not(:first-child){border-left:none}
+.pie-tab.active{background:var(--blue);border-color:var(--blue);color:#fff}
+/* Gold card in overview */
+.gold-overview-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:10px}
+.gold-overview-header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fffbf0;border-bottom:1px solid var(--border)}
+/* Responsive 3-col stats on mobile */
+@media(max-width:600px){
+  #page-overview > div:first-child{grid-template-columns:1fr!important}
+  #page-overview > div:first-child > div{border-right:none!important;border-bottom:1px solid var(--border)}
+  #page-overview > div:first-child > div:last-child{border-bottom:none}
+  #alloc-charts-row{grid-template-columns:1fr!important}
+}
 .fund-group{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
 .fund-group-header{display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid var(--border)}
 .fund-group-total{font-size:13px;font-weight:600;margin-left:auto}
@@ -277,10 +295,6 @@ tr:hover td{background:var(--bg3)}
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v6M5.5 7.5L8 5l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         資金來源
       </div>
-      <div class="nav-item" onclick="showPage('gold',this)">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M3 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-        黃金存摺
-      </div>
       <div class="nav-section">工具</div>
       <div class="nav-item" onclick="showPage('notes',this)">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M3 2h8l2 2v10H3V2z" stroke="currentColor" stroke-width="1.3"/><path d="M6 6h4M6 9h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -323,73 +337,82 @@ tr:hover td{background:var(--bg3)}
       <!-- ══ 投資組合 ══ -->
       <div class="page active" id="page-overview">
 
-        <!-- Visual summary strip -->
-        <div class="card" style="margin-bottom:14px;padding:18px 20px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:16px">
-            <div style="padding-right:16px;border-right:1px solid var(--border)">
-              <div class="metric-label" style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px">總市值 <span style="font-weight:400;letter-spacing:0;text-transform:none">（TWD）</span></div>
-              <div style="font-size:26px;font-weight:600;letter-spacing:-.5px" id="total-value">—</div>
-              <div style="font-size:11px;margin-top:3px" id="total-pnl-pct">—</div>
-            </div>
-            <div style="padding-left:16px">
-              <div class="metric-label" style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px">總成本 <span style="font-weight:400;letter-spacing:0;text-transform:none">（TWD）</span></div>
-              <div style="font-size:26px;font-weight:600;letter-spacing:-.5px;color:var(--text2)" id="total-cost">—</div>
-              <div style="font-size:11px;margin-top:3px;color:var(--text3)" id="cost-sub">含手續費</div>
-            </div>
+        <!-- Top 3-col stats bar -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:14px;overflow:hidden">
+          <!-- 總資產 -->
+          <div style="padding:18px 20px;border-right:1px solid var(--border)">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:500">總資產</div>
+            <div style="font-size:24px;font-weight:700;letter-spacing:-.5px;line-height:1.2" id="total-value">—</div>
+            <div style="font-size:11px;margin-top:5px" id="total-pnl-pct">—</div>
           </div>
-          <!-- Market value vs cost visual bar -->
-          <div style="margin-bottom:14px">
-            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">
-              <span>成本基礎</span><span id="mv-vs-cost-pct">—</span>
-            </div>
-            <div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">
-              <div id="mv-bar" style="height:8px;border-radius:4px;background:var(--blue);transition:width .5s;width:0%"></div>
-            </div>
+          <!-- 總成本 -->
+          <div style="padding:18px 20px;border-right:1px solid var(--border)">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:500">總成本</div>
+            <div style="font-size:24px;font-weight:700;letter-spacing:-.5px;line-height:1.2;color:var(--text2)" id="total-cost">—</div>
+            <div style="font-size:11px;margin-top:5px;color:var(--text3)" id="cost-sub">含手續費</div>
           </div>
-          <!-- Two PnL cells -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px">
-              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px">未實現損益</div>
-              <div style="font-size:18px;font-weight:600;line-height:1.5" id="unrealized-pnl">—</div>
-              <div style="font-size:11px;margin-top:2px;color:var(--text3)">含手續費成本</div>
-            </div>
-            <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px">
-              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px">已實現損益</div>
-              <div style="font-size:20px;font-weight:600" id="realized-pnl-top">—</div>
-              <div style="font-size:11px;margin-top:2px;color:var(--text3)">歷史累計</div>
-            </div>
+          <!-- 未實現損益 -->
+          <div style="padding:18px 20px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:500">未實現損益</div>
+            <div style="font-size:24px;font-weight:700;letter-spacing:-.5px;line-height:1.2" id="unrealized-pnl">—</div>
+            <div style="font-size:11px;margin-top:5px;color:var(--text3)">含手續費成本</div>
           </div>
         </div>
 
-        <!-- Allocation horizontal bar -->
-        <div class="card" style="margin-bottom:14px;padding:14px 16px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-            <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">持股配比</div>
-            <div style="font-size:11px;color:var(--text3)" id="stock-count-label">— 檔 ｜ <span id="last-update-time">更新中…</span></div>
-          </div>
-          <div id="alloc-bar" style="display:flex;height:10px;border-radius:5px;overflow:hidden;margin-bottom:10px"></div>
-          <div id="alloc-legend" style="display:flex;flex-wrap:wrap;gap:8px 14px"></div>
+        <!-- Asset filter tabs -->
+        <div style="display:flex;gap:2px;margin-bottom:14px">
+          <button class="asset-tab active" onclick="setAssetTab('all',this)">全部</button>
+          <button class="asset-tab" onclick="setAssetTab('stocks',this)">股票</button>
+          <button class="asset-tab" onclick="setAssetTab('gold',this)">貴金屬</button>
         </div>
 
-        <!-- Holdings grid 2-col -->
+        <!-- Allocation bar + switchable pie -->
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px" id="alloc-charts-row">
+          <div class="card" style="padding:14px 16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">資產配置</div>
+              <div style="font-size:11px;color:var(--text3)" id="stock-count-label">— ｜ <span id="last-update-time">更新中…</span></div>
+            </div>
+            <div id="alloc-bar" style="display:flex;height:10px;border-radius:5px;overflow:hidden;margin-bottom:10px"></div>
+            <div id="alloc-legend" style="display:flex;flex-wrap:wrap;gap:8px 14px"></div>
+          </div>
+          <div class="card" style="padding:14px 16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em" id="pie-label">市場分布</div>
+              <div style="display:flex;gap:0">
+                <button class="pie-tab active" onclick="setPieMode('market',this)" title="市場分布">市場</button>
+                <button class="pie-tab" onclick="setPieMode('currency',this)" title="幣別分布">幣別</button>
+                <button class="pie-tab" onclick="setPieMode('risk',this)" title="風險分布">風險</button>
+              </div>
+            </div>
+            <div style="position:relative;height:140px"><canvas id="pieChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Holdings grid + gold cards -->
         <div class="holdings-grid" id="holdings-grid"></div>
+        <!-- Gold cards (shown in all / gold tab) -->
+        <div id="gold-cards-overview"></div>
 
         <!-- Charts row -->
         <div class="charts-row">
           <div class="card">
-            <div class="card-title">市值走勢（近6個月）</div>
+            <div class="card-title">市值走勢</div>
             <div style="position:relative;height:220px"><canvas id="lineChart"></canvas></div>
           </div>
           <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-              <div class="card-title" style="margin-bottom:0">市場別分布</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <div class="card-title" style="margin-bottom:0">已實現損益</div>
             </div>
-            <div style="position:relative;height:160px"><canvas id="pieChart"></canvas></div>
+            <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;margin-bottom:8px">
+              <div style="font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;font-weight:500">歷史累計</div>
+              <div style="font-size:20px;font-weight:600" id="realized-pnl-top">—</div>
+            </div>
           </div>
         </div>
 
         <!-- AI suggestion section -->
-        <div class="card" id="ai-suggestion-card" style="border:1px solid rgba(24,95,165,.25);background:#f4f8ff">>
+        <div class="card" id="ai-suggestion-card" style="border:1px solid rgba(24,95,165,.25);background:#f4f8ff">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
             <div style="display:flex;align-items:center;gap:8px">
               <div style="width:28px;height:28px;border-radius:7px;background:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0">
@@ -1021,18 +1044,23 @@ function renderOverview() {
   // Total value: TWD + USD two lines
   const tvEl = document.getElementById('total-value');
   tvEl.innerHTML = `${Math.round(totalMV_TWD).toLocaleString()}<span style="font-size:13px;color:var(--text3);font-weight:400"> TWD</span>`
-    + (totalMV_USD>0?`<br><span style="font-size:18px">${totalMV_USD.toFixed(2)}</span><span style="font-size:13px;color:var(--text3);font-weight:400"> USD</span>`:'');
+    + (totalMV_USD>0?`<br><span style="font-size:17px">$${totalMV_USD.toFixed(2)}</span><span style="font-size:12px;color:var(--text3);font-weight:400"> USD</span>`:'');
 
   const tcEl = document.getElementById('total-cost');
   tcEl.innerHTML = `${Math.round(totalCost_TWD).toLocaleString()}<span style="font-size:13px;color:var(--text2);font-weight:400"> TWD</span>`
-    + (totalCost_USD>0?`<br><span style="font-size:18px">${totalCost_USD.toFixed(2)}</span><span style="font-size:13px;color:var(--text2);font-weight:400"> USD</span>`:'');
+    + (totalCost_USD>0?`<br><span style="font-size:17px">$${totalCost_USD.toFixed(2)}</span><span style="font-size:12px;color:var(--text2);font-weight:400"> USD</span>`:'');
 
   // Unrealized split by currency
   let unrealizedTWD=totalMV_TWD-totalCost_TWD, unrealizedUSD=totalMV_USD-totalCost_USD;
   const unrealizedEl = document.getElementById('unrealized-pnl');
-  const twdHtml = `<span style="color:${unrealizedTWD>=0?'var(--up)':'var(--down)'}">${unrealizedTWD>=0?'+':''}${Math.round(unrealizedTWD).toLocaleString()}</span><span style="font-size:12px;color:var(--text3)"> TWD</span>`;
-  const usdHtml = unrealizedUSD!==0 ? `<br><span style="color:${unrealizedUSD>=0?'var(--up)':'var(--down)'};">${unrealizedUSD>=0?'+':''}${unrealizedUSD.toFixed(2)}</span><span style="font-size:12px;color:var(--text3)"> USD</span>` : '';
-  unrealizedEl.innerHTML = twdHtml + usdHtml;
+  const pnlColor = unrealizedTWD>=0?'var(--up)':'var(--down)';
+  const twdHtml = `<span style="color:${pnlColor}">${unrealizedTWD>=0?'+':''}${Math.round(unrealizedTWD).toLocaleString()}</span><span style="font-size:12px;color:var(--text3)"> TWD</span>`;
+  const usdColor = unrealizedUSD>=0?'var(--up)':'var(--down)';
+  const usdHtml = unrealizedUSD!==0 ? `<br><span style="color:${usdColor};">${unrealizedUSD>=0?'+':''}${unrealizedUSD.toFixed(2)}</span><span style="font-size:12px;color:var(--text3)"> USD</span>` : '';
+  // Percentage (TWD-based)
+  const pnlPctTWD = totalCost_TWD>0?(unrealizedTWD/totalCost_TWD*100):0;
+  const pctHtml = `<span style="font-size:13px;color:${pnlColor}"> (${pnlPctTWD>=0?'+':''}${pnlPctTWD.toFixed(1)}%)</span>`;
+  unrealizedEl.innerHTML = twdHtml + pctHtml + usdHtml;
   document.getElementById('total-pnl-pct').textContent = (unrealized>=0?'▲ +':'▼ ')+Math.abs(unrealizedPct).toFixed(2)+'%';
   document.getElementById('total-pnl-pct').style.color = unrealized>=0?'var(--up)':'var(--down)';
   const realizedTWD = getRealizedPnLByCurrency('tw');
@@ -1126,6 +1154,8 @@ function renderOverview() {
 
   renderPieChart(holdings);
   renderLineChart(); // recalculate with current prices each time
+  renderGoldOverviewCards();
+  applyAssetTab();
 }
 
 function editPrice(ticker, el) {
@@ -1150,20 +1180,146 @@ function editPrice(ticker, el) {
 // ══════════════════════════════════════════
 const PALETTE = ['#185FA5','#C0392B','#E67E22','#27AE60','#8E44AD','#16A085','#D35400'];
 
+let currentPieMode = 'market';
+let currentAssetTab = 'all';
+
+function setPieMode(mode, el) {
+  currentPieMode = mode;
+  document.querySelectorAll('.pie-tab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  const labels = {market:'市場分布', currency:'幣別分布', risk:'風險分布'};
+  document.getElementById('pie-label').textContent = labels[mode]||mode;
+  const holdings = getHoldings();
+  renderPieChart(holdings);
+}
+
+function setAssetTab(tab, el) {
+  currentAssetTab = tab;
+  document.querySelectorAll('.asset-tab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  applyAssetTab();
+}
+
+function applyAssetTab() {
+  const grid = document.getElementById('holdings-grid');
+  const goldDiv = document.getElementById('gold-cards-overview');
+  if(currentAssetTab === 'all') {
+    grid.style.display = '';
+    goldDiv.style.display = '';
+  } else if(currentAssetTab === 'stocks') {
+    grid.style.display = '';
+    goldDiv.style.display = 'none';
+  } else if(currentAssetTab === 'gold') {
+    grid.style.display = 'none';
+    goldDiv.style.display = '';
+  }
+}
+
+function renderGoldOverviewCards() {
+  const container = document.getElementById('gold-cards-overview');
+  if(!container) return;
+  container.innerHTML = '';
+  if(goldAssets.length === 0) return;
+  // Group all gold into one summary card
+  const totalGrams = goldAssets.reduce((s,g)=>s+g.grams, 0);
+  const totalCost = goldAssets.reduce((s,g)=>s+g.avgPrice*g.grams, 0);
+  const totalMV = goldAssets.reduce((s,g)=>{
+    const cp = currentPrices['GOLD_'+g.id] || g.avgPrice;
+    return s + cp*g.grams;
+  }, 0);
+  const pnl = totalMV - totalCost;
+  const pct = totalCost>0 ? pnl/totalCost*100 : 0;
+  const avg = totalGrams>0 ? totalCost/totalGrams : 0;
+  const currentAvg = totalGrams>0 ? totalMV/totalGrams : 0;
+  const pnlCls = pnl>=0?'pos':'neg';
+
+  const card = document.createElement('div');
+  card.className = 'holding-card';
+  card.style.marginBottom = '10px';
+  card.innerHTML = `
+    <div class="holding-top">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px">
+        <div>
+          <div class="holding-ticker">黃金存摺 <span class="badge" style="background:#FFF3CD;color:#856404;font-size:10px">貴金屬</span></div>
+          <div class="holding-name">${totalGrams.toFixed(2)} 公克 · ${goldAssets.length}筆</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">現價/克</div>
+          <div style="font-size:13px;font-weight:500;color:var(--text2)" onclick="openGoldPricePage()" title="點擊前往更新" style="cursor:pointer">${Math.round(currentAvg).toLocaleString()}</div>
+        </div>
+      </div>
+      <div class="pnl-bar-track">
+        <div class="pnl-bar-fill" style="width:${Math.min(Math.abs(pct)*2,100)}%;background:${pnl>=0?'var(--up)':'var(--down)'}"></div>
+      </div>
+    </div>
+    <div class="holding-bottom">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <div style="font-size:10px;color:#777;font-weight:500;margin-bottom:3px">損益金額</div>
+          <div style="font-size:17px;font-weight:700" class="${pnlCls}">${(pnl>=0?'+':'')}${Math.round(pnl).toLocaleString()}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:#777;font-weight:500;margin-bottom:3px">報酬率</div>
+          <div style="font-size:17px;font-weight:700" class="${pnlCls}">${pct>=0?'+':''}${pct.toFixed(1)}%</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid rgba(0,0,0,.07)">
+        <div style="font-size:11px;color:#777">均價 <span style="color:var(--text);font-weight:500">${Math.round(avg).toLocaleString()}/克</span></div>
+        <div style="font-size:11px;color:#777">市值 <span style="color:var(--text);font-weight:500">${Math.round(totalMV).toLocaleString()}</span></div>
+      </div>
+    </div>
+  `;
+  container.appendChild(card);
+}
+
+function openGoldPricePage() {
+  showPage('gold', document.querySelector('.nav-item[onclick*="gold"]') || document.createElement('div'));
+}
+
 function renderPieChart(holdings) {
-  // Market split doughnut
-  const tw = holdings.filter(h=>h.market==='tw'||h.market==='tw-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0);
-  const us = holdings.filter(h=>h.market==='us'||h.market==='us-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0);
-  const total=tw+us||1;
   if(pieChartInst) pieChartInst.destroy();
-  pieChartInst = new Chart(document.getElementById('pieChart'),{
+  const canvas = document.getElementById('pieChart');
+  if(!canvas) return;
+
+  let labels=[], data=[], colors=[];
+
+  if(currentPieMode === 'market') {
+    const tw = holdings.filter(h=>h.market==='tw'||h.market==='tw-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0);
+    const us = holdings.filter(h=>h.market==='us'||h.market==='us-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0);
+    const gold = goldAssets.reduce((s,g)=>s+(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams,0);
+    labels=['台股','美股','其他（黃金）']; data=[tw,us,gold]; colors=['#185FA5','#8E44AD','#E67E22'];
+  } else if(currentPieMode === 'currency') {
+    const twd = holdings.filter(h=>h.market==='tw'||h.market==='tw-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0)
+      + goldAssets.reduce((s,g)=>s+(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams,0);
+    const usd = holdings.filter(h=>h.market==='us'||h.market==='us-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0);
+    labels=['TWD','USD']; data=[twd,usd]; colors=['#185FA5','#D35400'];
+  } else if(currentPieMode === 'risk') {
+    // 風險分布：成長資產(股票) / 防禦資產(黃金、ETF) / 現金
+    const growth = holdings.filter(h=>!['0050','0056'].includes(h.ticker)&&(h.market==='tw'||h.market==='us'||h.market==='us-dca'||h.market==='tw-dca'))
+      .reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0);
+    const defensive = holdings.filter(h=>['0050','0056'].includes(h.ticker)).reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0)
+      + goldAssets.reduce((s,g)=>s+(currentPrices['GOLD_'+g.id]||g.avgPrice)*g.grams,0);
+    const cash = 0; // 現金目前無記錄
+    labels=['成長資產','防禦資產','現金']; data=[growth,defensive,cash]; colors=['#C0392B','#185FA5','#27AE60'];
+  }
+
+  // Remove zeros
+  const filtered = labels.map((l,i)=>({l,d:data[i],c:colors[i]})).filter(x=>x.d>0);
+  const total = filtered.reduce((s,x)=>s+x.d,0)||1;
+
+  pieChartInst = new Chart(canvas, {
     type:'doughnut',
     data:{
-      labels:['台股','美股'],
-      datasets:[{data:[tw,us],backgroundColor:['#185FA5','#D85A30'],borderWidth:0}]
+      labels:filtered.map(x=>x.l),
+      datasets:[{data:filtered.map(x=>x.d), backgroundColor:filtered.map(x=>x.c), borderWidth:0}]
     },
-    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
-      plugins:{legend:{position:'bottom',labels:{color:'#777',font:{size:11},boxWidth:10,padding:12}}}}
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'60%',
+      plugins:{
+        legend:{position:'bottom', labels:{color:'#777', font:{size:11}, boxWidth:10, padding:8}},
+        tooltip:{callbacks:{label:v=>`${v.label}: ${(v.raw/total*100).toFixed(1)}%`}}
+      }
+    }
   });
 }
 
@@ -2165,11 +2321,10 @@ async function refreshAllPrices(){
   dot.className='api-dot loading'; label.textContent='更新中…';
 
   let updated=0;
-  // Taiwan
+  // Taiwan stocks
   const twPrices=await fetchTWSEPrices(allTickers);
-  Object.entries(twPrices).forEach(([tk,p])=>{
-    currentPrices[tk]=p; updated++;
-  });
+  Object.entries(twPrices).forEach(([tk,p])=>{ currentPrices[tk]=p; updated++; });
+
   // US stocks via Finnhub
   const usTickers=holdings.filter(h=>h.market==='us'||h.market==='us-dca').map(h=>h.ticker);
   for(const tk of usTickers){
@@ -2177,13 +2332,27 @@ async function refreshAllPrices(){
     if(p){ currentPrices[tk]=p; updated++; }
   }
 
+  // Gold price from Taiwan Bank via Worker
+  if(goldAssets.length>0){
+    try{
+      const res=await fetch(`${PROXY}?action=gold`);
+      const data=await res.json();
+      if(data.price>0){
+        // Apply same price to all gold entries
+        goldAssets.forEach(g=>{ currentPrices['GOLD_'+g.id]=data.price; });
+        updated++;
+      }
+    }catch(e){}
+  }
+
   renderOverview(); renderTradesTable(); renderTax();
   const now=new Date();
   const timeStr=now.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
-  document.getElementById('last-update-time').textContent=`報價更新 ${timeStr}`;
+  if(document.getElementById('last-update-time'))
+    document.getElementById('last-update-time').textContent=`更新 ${timeStr}`;
 
   if(updated>0){
-    dot.className='api-dot ok'; label.textContent=`已更新 ${updated} 檔`;
+    dot.className='api-dot ok'; label.textContent=`已更新 ${updated} 項`;
   } else {
     dot.className='api-dot err'; label.textContent='更新失敗';
   }
@@ -2304,13 +2473,20 @@ const pageMeta={
 function showPage(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  // Gold page now opens overview with gold tab active
+  if(id==='gold'){
+    document.getElementById('page-overview').classList.add('active');
+    document.querySelector('.nav-item[onclick*="overview"]')?.classList.add('active');
+    document.getElementById('page-title').textContent='投資組合總覽';
+    setAssetTab('gold', document.querySelector('.asset-tab:nth-child(3)'));
+    closeSidebar(); return;
+  }
   document.getElementById('page-'+id).classList.add('active');
-  el.classList.add('active');
-  document.getElementById('page-title').textContent=pageMeta[id].title;
+  if(el) el.classList.add('active');
+  document.getElementById('page-title').textContent=pageMeta[id]?.title||'';
   closeSidebar();
   if(id==='reports') renderReportChart();
   if(id==='notes') renderNotes();
-  if(id==='gold') renderGold();
   if(id==='funds') { renderFunds(); setTimeout(renderFundPieChart,100); }
 }
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
