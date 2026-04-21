@@ -2562,7 +2562,7 @@ function renderAssets(){
             <button onclick="removeCustomType(${ct.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">×</button>
           </div>
         </div>
-        <div>${renderAssetItems('custom_'+${ct.id}, items, false)}</div>
+        <div>${renderAssetItems('custom_'+ct.id, items, false)}</div>
       `;
       dynList.appendChild(card);
     });
@@ -2610,7 +2610,7 @@ function getAssetItems(type){
 function openAssetModal(type, editId=null){
   _assetCurrentType=type; _assetEditingId=editId||null;
   const isJewelry=type==='jewelry';
-  document.getElementById('asset-grams-row').style.display=isJewelry?'':' none';
+  document.getElementById('asset-grams-row').style.display=isJewelry?'':'none';
   document.getElementById('asset-value-row').style.display=isJewelry?'none':'';
   const cfgKey=type.startsWith('custom_')?null:type;
   const cfgLabel=cfgKey&&ASSET_CONFIG[cfgKey]?ASSET_CONFIG[cfgKey].label:isJewelry?'飾金':(customAssetTypes.find(c=>c.id===parseInt(type.replace('custom_','')))?.name||'資產');
