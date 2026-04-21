@@ -233,6 +233,7 @@ tr:hover td{background:var(--bg3)}
   #page-overview > div:first-child > div{border-right:none!important;border-bottom:1px solid var(--border)}
   #page-overview > div:first-child > div:last-child{border-bottom:none}
   #alloc-charts-row{grid-template-columns:1fr!important}
+  #assets-charts-row{grid-template-columns:1fr!important}
 }
 .fund-group{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
 .fund-group-header{display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid var(--border)}
@@ -438,15 +439,28 @@ tr:hover td{background:var(--bg3)}
           <div style="font-size:12px;color:var(--text3);margin-top:6px">所有已記錄資產合計（TWD）</div>
         </div>
 
-        <!-- 資產類別橫條圖 -->
+        <!-- 圓餅圖 + 趨勢圖 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px" id="assets-charts-row">
+          <div class="card" style="padding:14px 16px">
+            <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">資產分布</div>
+            <div style="position:relative;height:180px"><canvas id="assetsPieChart"></canvas></div>
+          </div>
+          <div class="card" style="padding:14px 16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">淨資產趨勢</div>
+              <button class="btn btn-sm" onclick="recordNetWorth()" title="記錄今日淨資產">📌 記錄今日</button>
+            </div>
+            <div style="position:relative;height:180px"><canvas id="assetsTrendChart"></canvas></div>
+            <div style="font-size:11px;color:var(--text3);margin-top:6px">每次點「記錄今日」才會新增一個資料點</div>
+          </div>
+        </div>
+        <!-- 各類金額清單 -->
         <div class="card" style="margin-bottom:14px;padding:14px 16px">
-          <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">資產分布</div>
-          <div id="assets-bar" style="display:flex;height:28px;border-radius:6px;overflow:hidden;margin-bottom:10px"></div>
-          <div id="assets-bar-legend" style="display:flex;flex-wrap:wrap;gap:8px 16px"></div>
+          <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">各類金額明細</div>
+          <div id="assets-summary-list" style="display:flex;flex-direction:column;gap:8px"></div>
         </div>
 
         <!-- 各類資產區塊 -->
-        <!-- 1. 投資組合（從現有資料自動帶入） -->
         <div class="card" style="margin-bottom:14px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
             <div style="display:flex;align-items:center;gap:8px">
@@ -460,64 +474,39 @@ tr:hover td{background:var(--bg3)}
           <div id="assets-portfolio-breakdown" style="display:flex;flex-wrap:wrap;gap:8px"></div>
         </div>
 
-        <!-- 2. 現金 -->
-        <div class="card" style="margin-bottom:14px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="width:10px;height:10px;border-radius:2px;background:#27AE60"></div>
-              <div style="font-size:13px;font-weight:600">現金 ＆ 存款</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="font-size:16px;font-weight:700" id="assets-cash-total">—</div>
-              <button class="btn btn-sm" onclick="openAssetModal('cash')">+ 新增</button>
-            </div>
-          </div>
-          <div id="assets-cash-list"></div>
-        </div>
+        <!-- 動態資產類別 -->
+        <div id="assets-dynamic-list"></div>
 
-        <!-- 3. 房地產 -->
-        <div class="card" style="margin-bottom:14px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="width:10px;height:10px;border-radius:2px;background:#8E44AD"></div>
-              <div style="font-size:13px;font-weight:600">房地產</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="font-size:16px;font-weight:700" id="assets-property-total">—</div>
-              <button class="btn btn-sm" onclick="openAssetModal('property')">+ 新增</button>
-            </div>
-          </div>
-          <div id="assets-property-list"></div>
-        </div>
-
-        <!-- 4. 飾金 -->
-        <div class="card" style="margin-bottom:14px">
+        <!-- 飾金特殊區塊 -->
+        <div class="card" style="margin-bottom:14px" id="assets-jewelry-card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
             <div style="display:flex;align-items:center;gap:8px">
               <div style="width:10px;height:10px;border-radius:2px;background:#EF9F27"></div>
               <div style="font-size:13px;font-weight:600">飾金</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="font-size:16px;font-weight:700" id="assets-jewelry-total">—</div>
-              <button class="btn btn-sm" onclick="openAssetModal('jewelry')">+ 新增</button>
-            </div>
+            <div style="font-size:16px;font-weight:700" id="assets-jewelry-total">—</div>
+          </div>
+          <!-- 共用現值/克輸入 -->
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:10px;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--text3)">現值/克（輸入一次套用全部）</span>
+            <input type="number" id="jewelry-price-per-gram" placeholder="如 3500" style="width:100px;padding:5px 8px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:12px" oninput="updateJewelryTotal()">
+            <span style="font-size:11px;color:var(--text3)" id="jewelry-total-grams-label"></span>
           </div>
           <div id="assets-jewelry-list"></div>
+          <button class="btn btn-sm" style="margin-top:10px" onclick="openAssetModal('jewelry')">+ 新增飾金</button>
         </div>
 
-        <!-- 5. 其他資產 -->
-        <div class="card" style="margin-bottom:14px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="width:10px;height:10px;border-radius:2px;background:#95A5A6"></div>
-              <div style="font-size:13px;font-weight:600">其他資產</div>
+        <!-- 新增自訂類別 -->
+        <div class="card" style="margin-bottom:14px;border:1px dashed var(--border2)">
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text2)">＋ 新增資產大項目</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input type="text" id="new-asset-type-name" placeholder="如：保險、車輛、藝術品" style="flex:1;min-width:140px;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
+            <div style="position:relative">
+              <div id="new-asset-type-swatch" onclick="document.getElementById('new-asset-type-color').click()" style="width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border2);cursor:pointer;background:#5B7FA6"></div>
+              <input type="color" id="new-asset-type-color" value="#5B7FA6" onchange="document.getElementById('new-asset-type-swatch').style.background=this.value" style="opacity:0;width:0;height:0;position:absolute">
             </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="font-size:16px;font-weight:700" id="assets-other-total">—</div>
-              <button class="btn btn-sm" onclick="openAssetModal('other')">+ 新增</button>
-            </div>
+            <button class="btn btn-primary" onclick="addCustomAssetType()">新增大項目</button>
           </div>
-          <div id="assets-other-list"></div>
         </div>
       </div>
 
@@ -911,7 +900,13 @@ tr:hover td{background:var(--bg3)}
         <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">名稱 / 說明</label>
         <input type="text" id="asset-name" placeholder="如：台北自住房、美元定存" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <!-- 飾金顯示克數欄位，其他顯示金額 -->
+      <div id="asset-grams-row" style="display:none">
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">重量（公克）</label>
+        <input type="number" id="asset-grams" placeholder="如：10.5" step="0.01" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">現值由「現值/克」統一計算，不需逐筆輸入金額</div>
+      </div>
+      <div id="asset-value-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div>
           <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">金額</label>
           <input type="number" id="asset-value" placeholder="0" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
@@ -935,7 +930,7 @@ tr:hover td{background:var(--bg3)}
         <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">備註（選填）</label>
         <input type="text" id="asset-note" placeholder="地址、帳戶說明等" style="width:100%;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-family:inherit;font-size:13px">
       </div>
-      <button class="btn btn-primary" onclick="saveAsset()">新增</button>
+      <button class="btn btn-primary" id="asset-save-btn" onclick="saveAsset()">新增</button>
     </div>
   </div>
 </div>
@@ -1361,16 +1356,13 @@ function applyAssetTab() {
   cards.forEach(card => {
     const mkt = card.dataset.market || '';
     const isGold = mkt === 'gold';
-    if(currentAssetTab === 'all') {
-      card.style.display = '';
-    } else if(currentAssetTab === 'stocks') {
-      card.style.display = isGold ? 'none' : '';
-    } else if(currentAssetTab === 'gold') {
-      card.style.display = isGold ? '' : 'none';
-    }
+    if(currentAssetTab === 'all') card.style.display = '';
+    else if(currentAssetTab === 'stocks') card.style.display = isGold ? 'none' : '';
+    else if(currentAssetTab === 'gold') card.style.display = isGold ? '' : 'none';
   });
-  // gold-cards-overview is empty (retired system), always hide
   if(goldDiv) goldDiv.style.display = 'none';
+  // Re-render line chart filtered by current tab
+  renderLineChart(currentAssetTab);
 }
 
 function renderGoldOverviewCards() {
@@ -1484,32 +1476,34 @@ ${holdingsSummary}
   btn.disabled=false; btn.textContent='重新分析';
 }
 
-function renderLineChart() {
+function renderLineChart(filter) {
+  if(!filter) filter = currentAssetTab || 'all';
   if(lineChartInst) { lineChartInst.destroy(); lineChartInst=null; }
-  // Build monthly cost & estimated market value from trades
-  const allDates = trades.map(t=>t.date).sort();
+
+  // Filter trades by tab
+  const filteredTrades = trades.filter(t => {
+    if(filter === 'all') return true;
+    if(filter === 'stocks') return t.market !== 'gold';
+    if(filter === 'gold') return t.market === 'gold';
+    return true;
+  });
+
+  const allDates = filteredTrades.map(t=>t.date).sort();
   if(allDates.length===0) return;
 
-  // Generate month labels from first trade month to today
   const firstDate = new Date(allDates[0]);
   const now = new Date();
   const months = [];
   let cur = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
-  while(cur <= now) {
-    months.push(new Date(cur));
-    cur.setMonth(cur.getMonth()+1);
-  }
-  // For each month-end: compute cumulative cost invested & estimated market value
+  while(cur <= now) { months.push(new Date(cur)); cur.setMonth(cur.getMonth()+1); }
+
   const costData = [], mvData = [], labels = [];
   months.forEach(m => {
     const monthEnd = new Date(m.getFullYear(), m.getMonth()+1, 0);
     const cutoff = monthEnd.toISOString().split('T')[0];
-    // Sum all buy costs up to this month
-    const relevant = trades.filter(t => t.date <= cutoff);
+    const relevant = filteredTrades.filter(t => t.date <= cutoff);
     let totalCost = 0;
-    // track shares per ticker at this point
-    const shares = {};
-    const avgCost = {};
+    const shares = {}, avgCost = {};
     relevant.sort((a,b)=>a.date.localeCompare(b.date)).forEach(t=>{
       const fee = computeFee(t);
       if(!shares[t.ticker]) { shares[t.ticker]=0; avgCost[t.ticker]=0; }
@@ -1517,20 +1511,15 @@ function renderLineChart() {
         const prev = avgCost[t.ticker]*shares[t.ticker];
         shares[t.ticker]+=t.shares;
         avgCost[t.ticker]=(prev + t.price*t.shares+fee)/shares[t.ticker];
-      } else {
-        shares[t.ticker]-=t.shares;
-      }
+      } else { shares[t.ticker]-=t.shares; }
     });
-    // Total cost = sum of (avgCost * shares held) for current holdings
-    Object.keys(shares).forEach(tk=>{
-      if(shares[tk]>0) totalCost += avgCost[tk]*shares[tk];
-    });
-    // Estimated MV using current prices (approximate)
+    Object.keys(shares).forEach(tk=>{ if(shares[tk]>0) totalCost += avgCost[tk]*shares[tk]; });
     let mv=0;
     Object.keys(shares).forEach(tk=>{
-      mv += (currentPrices[tk]||0)*Math.max(shares[tk],0);
+      const isGold = filteredTrades.find(t=>t.ticker===tk)?.market==='gold';
+      const cp = isGold ? (currentPrices['GOLD_TRADE']||0) : (currentPrices[tk]||0);
+      mv += cp*Math.max(shares[tk],0);
     });
-    // Only add if there's any investment
     if(totalCost>0||mv>0){
       const mo = m.getMonth()+1;
       const yr = m.getFullYear();
@@ -1541,42 +1530,22 @@ function renderLineChart() {
   });
 
   const ctx = document.getElementById('lineChart');
+  if(!ctx) return;
   lineChartInst = new Chart(ctx, {
     type:'line',
     data:{
       labels,
       datasets:[
-        {
-          label:'市值（估）',
-          data:mvData,
-          borderColor:'#185FA5',
-          backgroundColor:'rgba(24,95,165,.07)',
-          fill:true, tension:.35,
-          pointRadius:3, pointBackgroundColor:'#185FA5', pointBorderColor:'#fff', pointBorderWidth:2,
-          borderWidth:2.5
-        },
-        {
-          label:'累積成本',
-          data:costData,
-          borderColor:'#aaa',
-          backgroundColor:'transparent',
-          fill:false, tension:.35,
-          pointRadius:0,
-          borderWidth:1.5,
-          borderDash:[4,3]
-        }
+        { label:'市值（估）', data:mvData, borderColor:'#185FA5', backgroundColor:'rgba(24,95,165,.07)', fill:true, tension:.35, pointRadius:3, pointBackgroundColor:'#185FA5', pointBorderColor:'#fff', pointBorderWidth:2, borderWidth:2.5 },
+        { label:'累積成本', data:costData, borderColor:'#aaa', backgroundColor:'transparent', fill:false, tension:.35, pointRadius:0, borderWidth:1.5, borderDash:[4,3] }
       ]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{display:true, position:'top', align:'end', labels:{color:'#999', font:{size:11}, boxWidth:10, padding:12}}
-      },
+      plugins:{ legend:{display:true, position:'top', align:'end', labels:{color:'#999', font:{size:11}, boxWidth:10, padding:12}} },
       scales:{
         x:{grid:{color:'rgba(0,0,0,.05)'}, ticks:{color:'#999', font:{size:11}, maxTicksLimit:8}},
-        y:{grid:{color:'rgba(0,0,0,.05)'}, ticks:{color:'#999', font:{size:11},
-          callback:v=> v>=10000 ? Math.round(v/10000)+'萬' : v.toLocaleString()
-        }}
+        y:{grid:{color:'rgba(0,0,0,.05)'}, ticks:{color:'#999', font:{size:11}, callback:v=> v>=10000 ? Math.round(v/10000)+'萬' : v.toLocaleString()}}
       }
     }
   });
@@ -2081,21 +2050,33 @@ function renderFunds(){
     const groupEl = document.createElement('div');
     groupEl.className = 'fund-group';
 
-    // Header
+    // Header with collapse toggle
     const header = document.createElement('div');
     header.className = 'fund-group-header';
+    header.style.cursor = 'pointer';
+    header.onclick = () => {
+      const body = groupEl.querySelector('.fund-entries-body');
+      const arrow = header.querySelector('.fund-collapse-arrow');
+      const isOpen = body.style.display !== 'none';
+      body.style.display = isOpen ? 'none' : '';
+      arrow.textContent = isOpen ? '▸' : '▾';
+    };
     header.innerHTML=`
       <div class="fund-dot" style="background:${g.color};width:12px;height:12px;border-radius:50%;flex-shrink:0"></div>
       <div style="font-size:14px;font-weight:600;flex:1">${g.name}</div>
       <div style="font-size:11px;color:var(--text3);margin-right:8px">${g.entries.length}筆 · ${pct}%</div>
       <div class="fund-group-total">${gTotal.toLocaleString()}</div>
-      <button onclick="removeFundGroup(${g.id})" style="margin-left:10px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 4px" title="刪除大項目">×</button>
+      <span class="fund-collapse-arrow" style="font-size:11px;color:var(--text3);margin-left:8px">▾</span>
+      <button onclick="event.stopPropagation();removeFundGroup(${g.id})" style="margin-left:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 4px" title="刪除大項目">×</button>
     `;
     // Progress bar
     const bar = document.createElement('div');
     bar.style.cssText=`height:3px;background:${g.color};opacity:.4;width:${pct}%`;
 
-    // Entries
+    // Entries body (collapsible)
+    const entriesBody = document.createElement('div');
+    entriesBody.className = 'fund-entries-body';
+
     const entriesEl = document.createElement('div');
     g.entries.slice().sort((a,b)=>b.date.localeCompare(a.date)).forEach(e=>{
       const row=document.createElement('div');
@@ -2109,7 +2090,6 @@ function renderFunds(){
       entriesEl.appendChild(row);
     });
 
-    // Add entry form
     const addForm = document.createElement('div');
     addForm.className = 'fund-add-entry';
     addForm.innerHTML=`
@@ -2119,10 +2099,12 @@ function renderFunds(){
       <button class="btn btn-sm btn-primary" onclick="addFundEntry(${g.id})">新增一筆</button>
     `;
 
+    entriesBody.appendChild(entriesEl);
+    entriesBody.appendChild(addForm);
+
     groupEl.appendChild(header);
     groupEl.appendChild(bar);
-    groupEl.appendChild(entriesEl);
-    groupEl.appendChild(addForm);
+    groupEl.appendChild(entriesBody);
     container.appendChild(groupEl);
   });
   // Re-render pie chart whenever funds update
@@ -2433,75 +2415,103 @@ function renderFundPieChart(){
   });
 }
 // ══════════════════════════════════════════
-// ══════════════════════════════════════════
 //  ASSET OVERVIEW
 // ══════════════════════════════════════════
 let otherAssets = { cash:[], property:[], jewelry:[], other:[] };
+let customAssetTypes = [];
 let assetIdCounter = 1;
+let customTypeIdCounter = 1;
+let jewelryPricePerGram = 0;
+let assetsPieChartInst = null;
+let assetsTrendChartInst = null;
+let assetNetWorthHistory = []; // [{date, value}]
 const FX_RATES = { TWD:1, USD:32, JPY:0.21, EUR:35, HKD:4.1 };
 const ASSET_CONFIG = {
   cash:     { label:'現金 ＆ 存款', color:'#27AE60' },
   property: { label:'房地產',       color:'#8E44AD' },
-  jewelry:  { label:'飾金',         color:'#EF9F27' },
   other:    { label:'其他資產',      color:'#95A5A6' }
 };
 function assetToTWD(v,c){ return v*(FX_RATES[c]||1); }
 
+function updateJewelryTotal(){
+  const pg = parseFloat(document.getElementById('jewelry-price-per-gram')?.value)||0;
+  jewelryPricePerGram = pg;
+  renderAssets();
+}
+
 function renderAssets(){
-  const holdings=getHoldings();
+  const holdings = getHoldings();
   let pTWD=0,pUSD=0;
   holdings.forEach(h=>{
     const isGold=h.market==='gold';
     const isUS=h.market==='us'||h.market==='us-dca';
-    const cp = isGold ? (currentPrices['GOLD_TRADE']||currentPrices[h.ticker]||0)
-                      : (currentPrices[h.ticker]||0);
+    const cp = isGold?(currentPrices['GOLD_TRADE']||0):(currentPrices[h.ticker]||0);
     if(isUS) pUSD+=cp*h.shares; else pTWD+=cp*h.shares;
   });
-  const pTotal=pTWD+pUSD*FX_RATES.USD;
+  const pTotal = pTWD + pUSD*FX_RATES.USD;
 
-  const totals={};
-  let grand=pTotal;
+  const pg = jewelryPricePerGram;
+  const jewelryGrams = (otherAssets.jewelry||[]).reduce((s,a)=>s+(a.grams||0),0);
+  const jewelryTotal = Math.round(jewelryGrams * pg);
+
+  const totals = {};
   Object.keys(ASSET_CONFIG).forEach(k=>{
-    const t=(otherAssets[k]||[]).reduce((s,a)=>s+assetToTWD(a.value,a.currency),0);
-    totals[k]=t; grand+=t;
+    totals[k] = (otherAssets[k]||[]).reduce((s,a)=>s+assetToTWD(a.value||0,a.currency||'TWD'),0);
+  });
+  const customTotals = {};
+  (customAssetTypes||[]).forEach(ct=>{
+    customTotals[ct.id] = (ct.items||[]).reduce((s,a)=>s+assetToTWD(a.value||0,a.currency||'TWD'),0);
   });
 
-  const nwEl=document.getElementById('assets-net-worth');
-  if(nwEl) nwEl.textContent=Math.round(grand).toLocaleString()+' TWD';
+  const grand = pTotal + jewelryTotal + Object.values(totals).reduce((s,v)=>s+v,0) + Object.values(customTotals).reduce((s,v)=>s+v,0);
 
-  // Bar
-  const barEl=document.getElementById('assets-bar');
-  const legEl=document.getElementById('assets-bar-legend');
-  if(barEl&&legEl){
-    barEl.innerHTML=''; legEl.innerHTML='';
-    const segs=[
-      {label:'投資組合',color:'#185FA5',value:pTotal},
-      ...Object.keys(ASSET_CONFIG).map(k=>({label:ASSET_CONFIG[k].label,color:ASSET_CONFIG[k].color,value:totals[k]}))
-    ].filter(s=>s.value>0);
-    const tot=segs.reduce((s,x)=>s+x.value,0)||1;
-    segs.forEach(s=>{
-      const pct=s.value/tot*100;
-      const seg=document.createElement('div');
-      seg.style.cssText=`width:${pct}%;background:${s.color};height:28px;`;
-      seg.title=`${s.label}: ${pct.toFixed(1)}%`;
-      barEl.appendChild(seg);
-      const leg=document.createElement('span');
-      leg.style.cssText='display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)';
-      leg.innerHTML=`<span style="width:8px;height:8px;border-radius:2px;background:${s.color};display:inline-block;flex-shrink:0"></span>${s.label} <span style="color:var(--text3)">${pct.toFixed(1)}%</span>`;
-      legEl.appendChild(leg);
+  const nwEl = document.getElementById('assets-net-worth');
+  if(nwEl) nwEl.textContent = Math.round(grand).toLocaleString() + ' TWD';
+
+  // Pie chart
+  const pieSegs = [
+    {label:'投資組合', color:'#185FA5', value:pTotal},
+    {label:'飾金', color:'#EF9F27', value:jewelryTotal},
+    ...Object.keys(ASSET_CONFIG).map(k=>({label:ASSET_CONFIG[k].label, color:ASSET_CONFIG[k].color, value:totals[k]})),
+    ...(customAssetTypes||[]).map(ct=>({label:ct.name, color:ct.color, value:customTotals[ct.id]}))
+  ].filter(s=>s.value>0);
+  const pieTotal = pieSegs.reduce((s,x)=>s+x.value,0)||1;
+
+  if(assetsPieChartInst) { assetsPieChartInst.destroy(); assetsPieChartInst=null; }
+  const pieCanvas = document.getElementById('assetsPieChart');
+  if(pieCanvas) {
+    assetsPieChartInst = new Chart(pieCanvas, {
+      type:'doughnut',
+      data:{ labels:pieSegs.map(s=>s.label), datasets:[{data:pieSegs.map(s=>s.value), backgroundColor:pieSegs.map(s=>s.color), borderWidth:0}] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'55%', plugins:{ legend:{position:'bottom', labels:{color:'#777', font:{size:11}, boxWidth:10, padding:8}} } }
     });
   }
 
-  // Portfolio card
-  const pbEl=document.getElementById('assets-portfolio-total');
-  if(pbEl) pbEl.textContent=Math.round(pTotal).toLocaleString();
-  const pbBreak=document.getElementById('assets-portfolio-breakdown');
+  // Summary list (移到圓餅圖下方的獨立清單卡片)
+  const sumList = document.getElementById('assets-summary-list');
+  if(sumList){
+    sumList.innerHTML = '';
+    pieSegs.forEach(s=>{
+      const pct=(s.value/pieTotal*100).toFixed(1);
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border)';
+      row.innerHTML=`<span style="width:8px;height:8px;border-radius:2px;background:${s.color};flex-shrink:0;display:inline-block"></span><span style="flex:1;color:var(--text2)">${s.label}</span><span style="font-weight:600">${Math.round(s.value).toLocaleString()}</span><span style="color:var(--text3);width:40px;text-align:right">${pct}%</span>`;
+      sumList.appendChild(row);
+    });
+  }
+
+  // Trend chart
+  renderAssetsTrendChart();
+
+  // Portfolio breakdown
+  const pbEl = document.getElementById('assets-portfolio-total');
+  if(pbEl) pbEl.textContent = Math.round(pTotal).toLocaleString();
+  const pbBreak = document.getElementById('assets-portfolio-breakdown');
   if(pbBreak){
     pbBreak.innerHTML='';
-    [
-      {label:'台股',value:holdings.filter(h=>h.market==='tw'||h.market==='tw-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0)},
-      {label:'美股',value:pUSD*FX_RATES.USD},
-      {label:'黃金存摺',value:holdings.filter(h=>h.market==='gold').reduce((s,h)=>s+(currentPrices['GOLD_TRADE']||currentPrices[h.ticker]||0)*h.shares,0)}
+    [{label:'台股',value:holdings.filter(h=>h.market==='tw'||h.market==='tw-dca').reduce((s,h)=>s+(currentPrices[h.ticker]||0)*h.shares,0)},
+     {label:'美股',value:pUSD*FX_RATES.USD},
+     {label:'黃金存摺',value:holdings.filter(h=>h.market==='gold').reduce((s,h)=>s+(currentPrices['GOLD_TRADE']||0)*h.shares,0)}
     ].filter(c=>c.value>0).forEach(c=>{
       const chip=document.createElement('div');
       chip.style.cssText='padding:6px 12px;background:var(--bg3);border-radius:20px;font-size:12px;color:var(--text2)';
@@ -2510,64 +2520,236 @@ function renderAssets(){
     });
   }
 
-  // Other asset types
-  Object.keys(ASSET_CONFIG).forEach(type=>{
-    const cfg=ASSET_CONFIG[type];
-    const tEl=document.getElementById(`assets-${type}-total`);
-    const lEl=document.getElementById(`assets-${type}-list`);
-    if(tEl) tEl.textContent=totals[type]>0?Math.round(totals[type]).toLocaleString():'—';
-    if(!lEl) return;
-    lEl.innerHTML='';
-    const items=otherAssets[type]||[];
-    if(items.length===0){
-      lEl.innerHTML=`<div style="font-size:12px;color:var(--text3);padding:8px 0">尚未新增，點「+ 新增」開始記錄</div>`;
-      return;
-    }
-    items.forEach(a=>{
-      const row=document.createElement('div');
-      row.style.cssText='display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap';
-      row.innerHTML=`
-        <span style="flex:1;font-weight:500">${a.name}</span>
-        <span style="color:var(--text3);font-size:11px">${a.date||''}</span>
-        <span style="font-weight:600">${a.value.toLocaleString()} ${a.currency}</span>
-        ${a.currency!=='TWD'?`<span style="font-size:11px;color:var(--text3)">≈${Math.round(assetToTWD(a.value,a.currency)).toLocaleString()} TWD</span>`:''}
-        ${a.note?`<span style="color:var(--text3);font-size:11px">${a.note}</span>`:''}
-        <button onclick="deleteAsset('${type}',${a.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0 4px">×</button>
+  // Dynamic asset cards
+  const dynList = document.getElementById('assets-dynamic-list');
+  if(dynList){
+    dynList.innerHTML='';
+    Object.keys(ASSET_CONFIG).forEach(type=>{
+      const cfg = ASSET_CONFIG[type];
+      const items = otherAssets[type]||[];
+      const total = totals[type];
+      const card = document.createElement('div');
+      card.className='card'; card.style.marginBottom='14px';
+      card.innerHTML=`
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:10px;height:10px;border-radius:2px;background:${cfg.color}"></div>
+            <div style="font-size:13px;font-weight:600">${cfg.label}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:16px;font-weight:700">${total>0?Math.round(total).toLocaleString():'—'}</div>
+            <button class="btn btn-sm" onclick="openAssetModal('${type}')">+ 新增</button>
+          </div>
+        </div>
+        <div>${renderAssetItems(type, items, false)}</div>
       `;
-      lEl.appendChild(row);
+      dynList.appendChild(card);
     });
-  });
+    (customAssetTypes||[]).forEach(ct=>{
+      const items = ct.items||[];
+      const total = customTotals[ct.id];
+      const card = document.createElement('div');
+      card.className='card'; card.style.marginBottom='14px';
+      card.innerHTML=`
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:10px;height:10px;border-radius:2px;background:${ct.color}"></div>
+            <div style="font-size:13px;font-weight:600">${ct.name}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:16px;font-weight:700">${total>0?Math.round(total).toLocaleString():'—'}</div>
+            <button class="btn btn-sm" onclick="openAssetModal('custom_${ct.id}')">+ 新增</button>
+            <button onclick="removeCustomType(${ct.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">×</button>
+          </div>
+        </div>
+        <div>${renderAssetItems('custom_'+${ct.id}, items, false)}</div>
+      `;
+      dynList.appendChild(card);
+    });
+  }
+
+  // Jewelry block
+  const jList = document.getElementById('assets-jewelry-list');
+  if(jList) jList.innerHTML = renderAssetItems('jewelry', otherAssets.jewelry||[], true);
+  const jTotalEl = document.getElementById('assets-jewelry-total');
+  if(jTotalEl) jTotalEl.textContent = jewelryTotal>0?jewelryTotal.toLocaleString():'—';
+  const lbl = document.getElementById('jewelry-total-grams-label');
+  if(lbl) lbl.textContent = `總重 ${jewelryGrams.toFixed(2)}g　估值 ${jewelryTotal.toLocaleString()} TWD`;
+  const pgInput = document.getElementById('jewelry-price-per-gram');
+  if(pgInput && pg>0 && !pgInput.dataset.userTyping) pgInput.value = pg;
+}
+
+function renderAssetItems(type, items, isJewelry){
+  if(!items||items.length===0) return '<div style="font-size:12px;color:var(--text3);padding:8px 0">尚未新增，點「+ 新增」開始記錄</div>';
+  return items.map(a=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap">
+      <span style="flex:1;font-weight:500">${a.name}</span>
+      <span style="color:var(--text3);font-size:11px">${a.date||''}</span>
+      ${isJewelry
+        ? `<span style="font-weight:600">${(a.grams||0).toFixed(2)} g</span>`
+        : `<span style="font-weight:600">${(a.value||0).toLocaleString()} ${a.currency||'TWD'}</span>${(a.currency&&a.currency!=='TWD')?`<span style="font-size:11px;color:var(--text3)">≈${Math.round(assetToTWD(a.value||0,a.currency)).toLocaleString()} TWD</span>`:''}`
+      }
+      ${a.note?`<span style="color:var(--text3);font-size:11px">${a.note}</span>`:''}
+      <button onclick="openEditAsset('${type}',${a.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0 3px">✏️</button>
+      <button onclick="deleteAsset('${type}',${a.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0 3px">×</button>
+    </div>
+  `).join('');
 }
 
 let _assetCurrentType='cash';
-function openAssetModal(type){
-  _assetCurrentType=type;
-  document.getElementById('asset-modal-title').textContent='新增'+ASSET_CONFIG[type].label;
-  document.getElementById('asset-name').value='';
-  document.getElementById('asset-value').value='';
-  document.getElementById('asset-currency').value='TWD';
-  document.getElementById('asset-date').value=new Date().toISOString().split('T')[0];
-  document.getElementById('asset-note').value='';
+let _assetEditingId=null;
+
+function getAssetItems(type){
+  if(type.startsWith('custom_')){
+    const ctId=parseInt(type.replace('custom_',''));
+    return (customAssetTypes.find(c=>c.id===ctId)?.items)||[];
+  }
+  return otherAssets[type]||[];
+}
+
+function openAssetModal(type, editId=null){
+  _assetCurrentType=type; _assetEditingId=editId||null;
+  const isJewelry=type==='jewelry';
+  document.getElementById('asset-grams-row').style.display=isJewelry?'':' none';
+  document.getElementById('asset-value-row').style.display=isJewelry?'none':'';
+  const cfgKey=type.startsWith('custom_')?null:type;
+  const cfgLabel=cfgKey&&ASSET_CONFIG[cfgKey]?ASSET_CONFIG[cfgKey].label:isJewelry?'飾金':(customAssetTypes.find(c=>c.id===parseInt(type.replace('custom_','')))?.name||'資產');
+  document.getElementById('asset-modal-title').textContent=(editId?'編輯':'新增')+cfgLabel;
+  document.getElementById('asset-save-btn').textContent=editId?'儲存修改':'新增';
+  if(editId){
+    const item=getAssetItems(type).find(a=>a.id===editId);
+    if(item){
+      document.getElementById('asset-name').value=item.name||'';
+      document.getElementById('asset-date').value=item.date||'';
+      document.getElementById('asset-note').value=item.note||'';
+      if(isJewelry) document.getElementById('asset-grams').value=item.grams||'';
+      else { document.getElementById('asset-value').value=item.value||''; document.getElementById('asset-currency').value=item.currency||'TWD'; }
+    }
+  } else {
+    ['asset-name','asset-note','asset-grams','asset-value'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('asset-date').value=new Date().toISOString().split('T')[0];
+    document.getElementById('asset-currency').value='TWD';
+  }
   document.getElementById('asset-modal').style.display='flex';
 }
+function openEditAsset(type,id){ openAssetModal(type,id); }
 function closeAssetModal(){ document.getElementById('asset-modal').style.display='none'; }
+
 function saveAsset(){
   const name=document.getElementById('asset-name').value.trim();
-  const value=parseFloat(document.getElementById('asset-value').value);
-  const currency=document.getElementById('asset-currency').value;
   const date=document.getElementById('asset-date').value;
   const note=document.getElementById('asset-note').value.trim();
-  if(!name||!value){alert('請填寫名稱和金額');return;}
-  if(!otherAssets[_assetCurrentType]) otherAssets[_assetCurrentType]=[];
-  otherAssets[_assetCurrentType].push({id:assetIdCounter++,name,value,currency,date,note});
+  const isJewelry=_assetCurrentType==='jewelry';
+  const grams=isJewelry?parseFloat(document.getElementById('asset-grams').value)||0:0;
+  const value=isJewelry?0:parseFloat(document.getElementById('asset-value').value)||0;
+  const currency=isJewelry?'TWD':document.getElementById('asset-currency').value;
+  if(!name){alert('請填寫名稱');return;}
+  if(isJewelry&&!grams){alert('請填寫克數');return;}
+  if(!isJewelry&&!value){alert('請填寫金額');return;}
+  const item={id:_assetEditingId||assetIdCounter++,name,date,note,value,currency,grams};
+  if(_assetEditingId){
+    const items=getAssetItems(_assetCurrentType);
+    const idx=items.findIndex(a=>a.id===_assetEditingId);
+    if(idx!==-1) items[idx]=item;
+  } else {
+    if(_assetCurrentType.startsWith('custom_')){
+      const ctId=parseInt(_assetCurrentType.replace('custom_',''));
+      const ct=customAssetTypes.find(c=>c.id===ctId);
+      if(ct){ if(!ct.items) ct.items=[]; ct.items.push(item); }
+    } else {
+      if(!otherAssets[_assetCurrentType]) otherAssets[_assetCurrentType]=[];
+      otherAssets[_assetCurrentType].push(item);
+    }
+  }
   closeAssetModal(); renderAssets(); saveAllToCloud();
 }
+
 function deleteAsset(type,id){
   if(!confirm('確定刪除這筆？')) return;
-  otherAssets[type]=(otherAssets[type]||[]).filter(a=>a.id!==id);
+  if(type.startsWith('custom_')){
+    const ctId=parseInt(type.replace('custom_',''));
+    const ct=customAssetTypes.find(c=>c.id===ctId);
+    if(ct) ct.items=(ct.items||[]).filter(a=>a.id!==id);
+  } else {
+    otherAssets[type]=(otherAssets[type]||[]).filter(a=>a.id!==id);
+  }
   renderAssets(); saveAllToCloud();
 }
 
+function addCustomAssetType(){
+  const name=document.getElementById('new-asset-type-name').value.trim();
+  const color=document.getElementById('new-asset-type-color').value;
+  if(!name){alert('請填寫大項目名稱');return;}
+  if(!customAssetTypes) customAssetTypes=[];
+  customAssetTypes.push({id:customTypeIdCounter++,name,color,items:[]});
+  document.getElementById('new-asset-type-name').value='';
+  renderAssets(); saveAllToCloud();
+}
+
+function removeCustomType(id){
+  if(!confirm('確定刪除此大項目及所有子項目？')) return;
+  customAssetTypes=customAssetTypes.filter(c=>c.id!==id);
+  renderAssets(); saveAllToCloud();
+}
+
+function recordNetWorth(){
+  // 記錄今日淨資產到歷史陣列
+  const nwEl = document.getElementById('assets-net-worth');
+  const val = parseInt((nwEl?.textContent||'0').replace(/[^0-9]/g,''))||0;
+  if(!val){alert('淨資產為 0，請先輸入資產資料');return;}
+  const today = new Date().toISOString().split('T')[0];
+  if(!assetNetWorthHistory) assetNetWorthHistory=[];
+  // 同一天更新就覆蓋
+  const idx = assetNetWorthHistory.findIndex(p=>p.date===today);
+  if(idx!==-1) assetNetWorthHistory[idx].value=val;
+  else assetNetWorthHistory.push({date:today, value:val});
+  assetNetWorthHistory.sort((a,b)=>a.date.localeCompare(b.date));
+  renderAssetsTrendChart();
+  saveAllToCloud();
+  alert(`已記錄今日淨資產：${val.toLocaleString()} TWD`);
+}
+
+function renderAssetsTrendChart(){
+  if(assetsTrendChartInst){ assetsTrendChartInst.destroy(); assetsTrendChartInst=null; }
+  const canvas = document.getElementById('assetsTrendChart');
+  if(!canvas) return;
+  const history = (assetNetWorthHistory||[]).slice(-24); // 最近24筆
+  if(history.length===0){
+    // 空狀態提示
+    const ctx2d = canvas.getContext('2d');
+    if(ctx2d){
+      ctx2d.clearRect(0,0,canvas.width,canvas.height);
+      ctx2d.fillStyle='#999';
+      ctx2d.font='12px -apple-system, sans-serif';
+      ctx2d.textAlign='center';
+      ctx2d.fillText('點「📌 記錄今日」開始追蹤淨資產趨勢',canvas.width/2,canvas.height/2);
+    }
+    return;
+  }
+  assetsTrendChartInst = new Chart(canvas, {
+    type:'line',
+    data:{
+      labels: history.map(p=>p.date.slice(5)), // MM-DD
+      datasets:[{
+        label:'淨資產 TWD',
+        data: history.map(p=>p.value),
+        borderColor:'#27AE60',
+        backgroundColor:'rgba(39,174,96,.08)',
+        fill:true, tension:.35,
+        pointRadius:4, pointBackgroundColor:'#27AE60', pointBorderColor:'#fff', pointBorderWidth:2,
+        borderWidth:2.5
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,.05)'}, ticks:{color:'#999', font:{size:10}, maxTicksLimit:8}},
+        y:{grid:{color:'rgba(0,0,0,.05)'}, ticks:{color:'#999', font:{size:10}, callback:v=>v>=10000?Math.round(v/10000)+'萬':v.toLocaleString()}}
+      }
+    }
+  });
+}
 // Cloudflare Workers 中繼網址
 const PROXY = 'https://investment-proxy.j050311.workers.dev';
 
@@ -2894,6 +3076,9 @@ async function saveAllToCloud() {
       goldAssets: [],  // 已退役，統一用交易紀錄
       notes: notes,
       otherAssets: otherAssets,
+      customAssetTypes: customAssetTypes||[],
+      jewelryPricePerGram: jewelryPricePerGram||0,
+      assetNetWorthHistory: assetNetWorthHistory||[],
       updatedAt: new Date().toISOString()
     });
     setCloudStatus('ok','已儲存 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}));
@@ -2941,10 +3126,17 @@ async function loadFromCloud() {
       if(d.notes && d.notes.length>0) { notes=d.notes; noteIdCounter=Math.max(...notes.map(n=>n.id||0),0)+1; }
       if(d.otherAssets) {
         otherAssets = {...otherAssets, ...d.otherAssets};
-        // Rebuild assetIdCounter from all entries
         const allIds = Object.values(otherAssets).flat().map(a=>a.id||0);
         if(allIds.length>0) assetIdCounter = Math.max(...allIds)+1;
       }
+      if(d.customAssetTypes) {
+        customAssetTypes = d.customAssetTypes;
+        if(customAssetTypes.length>0) customTypeIdCounter = Math.max(...customAssetTypes.map(c=>c.id||0))+1;
+        const customItemIds = customAssetTypes.flatMap(c=>(c.items||[]).map(a=>a.id||0));
+        if(customItemIds.length>0) assetIdCounter = Math.max(assetIdCounter, Math.max(...customItemIds)+1);
+      }
+      if(typeof d.jewelryPricePerGram === 'number') jewelryPricePerGram = d.jewelryPricePerGram;
+      if(d.assetNetWorthHistory) assetNetWorthHistory = d.assetNetWorthHistory;
       if(d.finnhubKey) {
         finnhubKey = d.finnhubKey;
         localStorage.setItem('finnhub_key', finnhubKey);
